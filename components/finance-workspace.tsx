@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Dashboard from "./dashboard";
+import CategoryManager from "./category-manager";
+import { categoryOptions } from "@/lib/categories";
 import { ArrowLeft, UsersRound, ChevronRight } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import { money, today, type FinanceData } from "@/lib/finance";
@@ -467,11 +469,9 @@ function SharedRoom({
                   />
                 </label>
                 <datalist id="shared-categories">
-                  {data.budgets
-                    .filter((b) => b.month === month)
-                    .map((b) => (
-                      <option key={b.id} value={b.name} />
-                    ))}
+                  {categoryOptions(data).map((name) => (
+                    <option key={name} value={name} />
+                  ))}
                 </datalist>
                 <label>
                   Tanggal
@@ -503,7 +503,10 @@ function SharedRoom({
                 .map((b) => {
                   const r = sharedRealization(data, b);
                   return (
-                    <details className="shared-budget" key={b.id}>
+                    <details
+                      className={`shared-budget ${r.spent > b.planned ? "over-budget" : ""}`}
+                      key={b.id}
+                    >
                       <summary>
                         <strong>{b.name}</strong>
                         <span>
@@ -580,7 +583,12 @@ function SharedRoom({
                 >
                   <label>
                     Kategori anggaran
-                    <input name="name" maxLength={80} required />
+                    <input
+                      name="name"
+                      list="shared-categories"
+                      maxLength={80}
+                      required
+                    />
                   </label>
                   <label>
                     Batas (Rp)
@@ -639,6 +647,18 @@ function SharedRoom({
               ))}
           </section>
         </>
+      )}
+      {data && (
+        <section className="shared-card">
+          <details>
+            <summary>Kelola Kategori Ruang</summary>
+            <CategoryManager
+              names={categoryOptions(data)}
+              readOnly={space.role !== "owner"}
+              onAdd={(name) => mutate({ action: "category", name })}
+            />
+          </details>
+        </section>
       )}
       {details && (
         <section className="shared-card">

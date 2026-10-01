@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { categoryNameSchema, categoryOptions } from "../lib/categories";
 import {
   backupSchema,
   entrySchema,
@@ -78,6 +79,17 @@ const data: FinanceData = {
     },
   ],
 };
+test("category options merge defaults, saved names and history without case duplicates", () => {
+  const names = categoryOptions({
+    ...data,
+    categories: ["Anak", " anak ", "Cicilan"],
+  });
+  assert.equal(names.filter((n) => n.toLowerCase() === "anak").length, 1);
+  assert.ok(names.includes("Cicilan"));
+  assert.ok(names.includes("Transportasi"));
+  assert.equal(categoryNameSchema.safeParse("   ").success, false);
+  assert.equal(categoryNameSchema.safeParse("a".repeat(81)).success, false);
+});
 test("shared transfers reduce personal balance without counting as spending or savings", () => {
   const transfer = {
     ...data.entries[0],

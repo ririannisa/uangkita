@@ -2,6 +2,8 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import CategoryManager from "./category-manager";
+import { categoryOptions } from "@/lib/categories";
 import { useRouter } from "next/navigation";
 import {
   ArrowDownLeft,
@@ -26,6 +28,7 @@ import {
   Upload,
   UserRound,
   UsersRound,
+  Tags,
   Wallet,
   X,
   PiggyBank,
@@ -73,16 +76,6 @@ const typeLabels = {
   withdraw: "Tarik tabungan",
   fixed: "Pengeluaran tetap",
 };
-const categoryNames = [
-  "Makan & minum",
-  "Transportasi",
-  "Belanja",
-  "Tempat tinggal",
-  "Kesehatan",
-  "Hiburan",
-  "Pendidikan",
-  "Lainnya",
-];
 
 function CategoryIcon({ name, size = 20 }: { name: string; size?: number }) {
   const Icon = /makan|minum/i.test(name)
@@ -125,6 +118,7 @@ export default function Dashboard({
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
+  const categoryDialog = useRef<HTMLDialogElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
   const f = figures(data, month);
@@ -179,6 +173,11 @@ export default function Dashboard({
         )
           throw new Error("Kategori sudah memiliki anggaran pada bulan ini.");
         setData((current) => {
+          if (action.action === "category")
+            return {
+              ...current,
+              categories: [...(current.categories ?? []), action.name.trim()],
+            };
           if (action.action === "entry")
             return {
               ...current,
@@ -529,6 +528,26 @@ export default function Dashboard({
 
   return (
     <div className="app-shell">
+      <dialog
+        ref={categoryDialog}
+        className="entry-dialog"
+        aria-labelledby="category-title"
+      >
+        <div className="dialog-heading">
+          <h2 id="category-title">Kelola Kategori</h2>
+          <button
+            className="icon-button"
+            aria-label="Tutup kategori"
+            onClick={() => categoryDialog.current?.close()}
+          >
+            <X size={22} />
+          </button>
+        </div>
+        <CategoryManager
+          names={categoryOptions(data)}
+          onAdd={(name) => mutate({ action: "category", name })}
+        />
+      </dialog>
       <aside className="desktop-sidebar">
         <Link href="/" className="brand">
           dompet<span>ku.</span>
@@ -744,12 +763,15 @@ export default function Dashboard({
                         ["Pengeluaran tetap", Wallet, "fixed", "sky"],
                         ["Pendapatan", ArrowDownLeft, "income", "mint"],
                         ["Ruang Bersama", UsersRound, "spaces", "lavender"],
+                        ["Kelola Kategori", Tags, "categories", "mint"],
                       ] as const
                     ).map(([label, Icon, action, color]) => (
                       <button
                         key={label}
                         onClick={() => {
-                          if (action === "spaces") {
+                          if (action === "categories")
+                            categoryDialog.current?.showModal();
+                          else if (action === "spaces") {
                             if (onOpenSpaces) onOpenSpaces();
                             else router.push("/login");
                           } else if (action === "entry")
@@ -1318,12 +1340,7 @@ export default function Dashboard({
                     placeholder="Pilih atau tulis kategori"
                   />
                   <datalist id="categories">
-                    {[
-                      ...new Set([
-                        ...categoryNames,
-                        ...data.budgets.map((b) => b.name),
-                      ]),
-                    ].map((name) => (
+                    {categoryOptions(data).map((name) => (
                       <option key={name} value={name} />
                     ))}
                   </datalist>

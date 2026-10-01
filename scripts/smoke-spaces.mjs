@@ -16,6 +16,8 @@ const client = await request.newContext({
   extraHTTPHeaders: { origin },
 });
 const rooms = [];
+const categoryTestName = `Uji kategori ${randomUUID()}`;
+let categoryUser;
 let browser;
 async function post(path, data) {
   const r = await client.post(path, { data });
@@ -31,6 +33,25 @@ try {
     await client.get("/api/auth/get-session?disableCookieCache=true")
   ).json();
   const before = await (await client.get("/api/finance")).json();
+  categoryUser = session.user.id;
+  try {
+    await post("/api/finance", { action: "category", name: categoryTestName });
+    await post("/api/finance", {
+      action: "category",
+      name: categoryTestName.toUpperCase(),
+    });
+    const personalWithCategory = await (
+      await client.get("/api/finance")
+    ).json();
+    assert.equal(
+      personalWithCategory.categories.filter(
+        (n) => n.toLowerCase() === categoryTestName.toLowerCase(),
+      ).length,
+      1,
+    );
+  } finally {
+    await sql`DELETE FROM dompetku.personal_categories WHERE user_id=${categoryUser} AND name=${categoryTestName}`;
+  }
   const room = await post("/api/spaces", {
     action: "create",
     name: "Uji ruang sementara",
@@ -71,6 +92,25 @@ try {
   const result = await (await client.get(url)).json();
   assert.equal(result.finance.entries.length, 2);
   assert.equal(result.details.events.length, 3);
+  await post(url, { action: "category", name: "Anak tes" });
+  assert.ok(
+    (await (await client.get(url)).json()).finance.categories.includes(
+      "Anak tes",
+    ),
+  );
+  assert.equal(
+    (
+      await client.post(url, {
+        data: { action: "category", name: " anak TES " },
+      })
+    ).status(),
+    409,
+  );
+  assert.ok(
+    !(await (await client.get("/api/finance")).json()).categories.includes(
+      "Anak tes",
+    ),
+  );
   const personal = await (await client.get("/api/finance")).json();
   assert.deepEqual(
     {
@@ -154,6 +194,14 @@ try {
   assert.equal(
     (
       await client.post(foreignUrl, {
+        data: { action: "category", name: "Tidak boleh" },
+      })
+    ).status(),
+    403,
+  );
+  assert.equal(
+    (
+      await client.post(foreignUrl, {
         data: {
           action: "budget",
           budget: {
@@ -218,6 +266,41 @@ try {
     fullPage: true,
   });
   assert.deepEqual(errors, []);
+  await page
+    .getByRole("button", { name: "Kembali ke beranda", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { name: "Menu utama", exact: true })
+    .waitFor();
+  assert.match(
+    await page
+      .locator(".notice")
+      .filter({ hasText: "Transfer ke Ruang Bersama bulan ini" })
+      .innerText(),
+    /100\.000/,
+  );
+  assert.match(
+    await page
+      .locator(".transaction")
+      .filter({ hasText: "Transfer ke Uji ruang sementara" })
+      .innerText(),
+    /100\.000/,
+  );
+  assert.equal(
+    await page
+      .getByRole("button", {
+        name: "Edit Transfer ke Uji ruang sementara",
+        exact: true,
+      })
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Ruang Bersama", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Uji ruang sementara Pasangan" })
+    .click();
   assert.equal(
     (
       await client.post("/api/spaces", {
@@ -271,6 +354,8 @@ try {
     "PASS: shared CRUD, personal isolation, owner permissions, revoked access, mobile/desktop UI, delete confirmation, cascade cleanup and personal data preserved.",
   );
 } finally {
+  if (categoryUser)
+    await sql`DELETE FROM dompetku.personal_categories WHERE user_id=${categoryUser} AND name=${categoryTestName}`;
   if (browser) await browser.close();
   for (const id of rooms) await sql`DELETE FROM dompetku.spaces WHERE id=${id}`;
   await client.post("/api/auth/sign-out", { data: {} });

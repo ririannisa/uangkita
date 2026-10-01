@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { categoryActionSchema } from "./categories";
 import { entrySchema, budgetSchema, type Budget, normalize } from "./finance";
 
 export const sharedEntrySchema = entrySchema.extend({
@@ -8,8 +9,13 @@ export type SharedEntry = z.infer<typeof sharedEntrySchema> & {
   authorId: string;
   authorName: string;
 };
-export type SharedFinance = { entries: SharedEntry[]; budgets: Budget[] };
+export type SharedFinance = {
+  entries: SharedEntry[];
+  budgets: Budget[];
+  categories?: string[];
+};
 export const sharedMutationSchema = z.discriminatedUnion("action", [
+  categoryActionSchema,
   z.object({ action: z.literal("entry"), entry: sharedEntrySchema }),
   z.object({ action: z.literal("budget"), budget: budgetSchema }),
   z.object({

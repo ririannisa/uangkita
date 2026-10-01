@@ -43,7 +43,20 @@ export async function POST(request: Request, ctx: Context) {
     const a = parsed.data,
       sql = getSql();
     let rows;
-    if (a.action === "entry") {
+    if (a.action === "category") {
+      if (space.role !== "owner")
+        throw new SpaceError(
+          "Hanya pemilik yang dapat menambah kategori ruang.",
+          403,
+        );
+      rows =
+        await sql`WITH added AS (INSERT INTO dompetku.shared_categories(space_id,name) SELECT id,${a.name} FROM dompetku.spaces WHERE id=${space.id} AND owner_id=${user.id} ON CONFLICT DO NOTHING RETURNING name) INSERT INTO dompetku.space_events(space_id,actor_id,actor_name,action,detail) SELECT ${space.id},${user.id},${user.name},'Tambah kategori',jsonb_build_object('name',name) FROM added RETURNING id`;
+      if (!rows.length)
+        throw new SpaceError(
+          "Kategori sudah ada atau akses tidak diizinkan.",
+          409,
+        );
+    } else if (a.action === "entry") {
       const e = a.entry;
       rows =
         await sql`WITH changed AS (INSERT INTO dompetku.shared_entries(id,space_id,user_id,author_name,type,amount,category,note,date,active) SELECT ${e.id},s.id,${user.id},${user.name},${e.type},${e.amount},${e.category},${e.note},${e.date},${e.active} FROM dompetku.spaces s JOIN dompetku.space_members m ON m.space_id=s.id WHERE s.id=${space.id} AND m.user_id=${user.id} ON CONFLICT(id) DO UPDATE SET type=EXCLUDED.type,amount=EXCLUDED.amount,category=EXCLUDED.category,note=EXCLUDED.note,date=EXCLUDED.date,active=EXCLUDED.active WHERE dompetku.shared_entries.space_id=${space.id} AND (dompetku.shared_entries.user_id=${user.id} OR (dompetku.shared_entries.type <> 'contribution' AND EXCLUDED.type <> 'contribution' AND EXISTS(SELECT 1 FROM dompetku.spaces WHERE id=${space.id} AND owner_id=${user.id}))) RETURNING id) INSERT INTO dompetku.space_events(space_id,actor_id,actor_name,action,detail) SELECT ${space.id},${user.id},${user.name},'Simpan transaksi',${JSON.stringify({ category: e.category, amount: e.amount })}::jsonb FROM changed RETURNING id`;

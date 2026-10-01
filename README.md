@@ -4,6 +4,9 @@ Aplikasi keuangan pribadi Next.js App Router, React, Neon Postgres, dan managed 
 
 ## Ruang pasangan dan keluarga
 
+- **Kelola Kategori** di Menu utama menyimpan kategori pribadi ke Neon sebelum ada transaksi/anggaran. Kategori awal dan kategori historis tetap tersedia. Kategori pribadi ikut ekspor, impor, dan reset; cadangan lama tanpa kategori tetap didukung.
+- Di ruang, buka **Kelola Kategori Ruang**. Hanya pemilik yang dapat menambah kategori; semua anggota dapat memakainya pada transaksi dan anggaran. Kategori ruang terpisah dari pribadi dan ikut terhapus jika ruang dihapus. Versi ini menambah kategori tanpa mengganti nama/menghapus kategori historis.
+
 - Pilih **Ruang Bersama** dengan ikon keluarga di Menu utama untuk membuka daftar ruang, membuat ruang pasangan/keluarga, dan melihat undangan. Data pribadi tetap terpisah dari kas bersama.
 - Pemilik mengundang alamat email. Undangan tampil di akun penerima, berlaku 7 hari, dan **tidak dikirim melalui email otomatis**. Penerima harus memiliki email terverifikasi; tersedia alur kode verifikasi Neon Auth.
 - Semua anggota dapat melihat kas, mencatat kontribusi/pengeluaran, dan menghapus catatannya sendiri. Pemilik mengelola anggaran, undangan, akses anggota, serta pengeluaran. Kontribusi hanya dapat diubah/dihapus oleh penyetornya.

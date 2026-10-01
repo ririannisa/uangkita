@@ -234,6 +234,30 @@ label .muted {
   font-size: 12px;
   line-height: 1.6;
 }
+.category-manager > p {
+  margin-top: 16px;
+}
+.category-manager form {
+  display: grid;
+  gap: 14px;
+}
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+}
+.category-chips li {
+  background: var(--lilac);
+  color: var(--primary);
+  border-radius: 20px;
+  padding: 9px 13px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
 .positive {
   color: var(--green) !important;
 }
@@ -709,7 +733,7 @@ label .muted {
 }
 .quick-menu {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 .quick-menu > button {
@@ -1513,6 +1537,7 @@ label .muted {
   }
 }
 @media (max-width: 760px) {
+  input, select { font-size: 16px; }
   body {
     font-size: 14px;
   }

@@ -66,7 +66,9 @@ export async function POST(request: Request) {
       );
     const action = parsed.data;
     const sql = getSql();
-    if (action.action === "entry") {
+    if (action.action === "category") {
+      await sql`INSERT INTO dompetku.personal_categories(user_id,name) VALUES(${id},${action.name}) ON CONFLICT DO NOTHING`;
+    } else if (action.action === "entry") {
       const e = action.entry;
       const rows =
         await sql`INSERT INTO dompetku.entries (id, user_id, type, amount, category, note, date, active) VALUES (${e.id}, ${id}, ${e.type}, ${e.amount}, ${e.category}, ${e.note}, ${e.date}, ${e.active}) ON CONFLICT (id) DO UPDATE SET type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category, note = EXCLUDED.note, date = EXCLUDED.date, active = EXCLUDED.active WHERE dompetku.entries.user_id = ${id} RETURNING id`;
@@ -96,8 +98,12 @@ export async function POST(request: Request) {
         sql`DELETE FROM dompetku.entries WHERE user_id = ${id}`,
         sql`DELETE FROM dompetku.budgets WHERE user_id = ${id}`,
         sql`DELETE FROM dompetku.monthly_plans WHERE user_id = ${id}`,
+        sql`DELETE FROM dompetku.personal_categories WHERE user_id = ${id}`,
       ];
       if (action.action === "import") {
+        queries.push(
+          sql`INSERT INTO dompetku.personal_categories(user_id,name) SELECT ${id},value FROM jsonb_array_elements_text(${JSON.stringify(action.backup.categories)}::jsonb) ON CONFLICT DO NOTHING`,
+        );
         // All validation happens before replacement; one transaction prevents partial restores.
         queries.push(
           sql`INSERT INTO dompetku.entries (user_id, type, amount, category, note, date, active) SELECT ${id}, type, amount, category, note, date, active FROM jsonb_to_recordset(${JSON.stringify(action.backup.entries)}::jsonb) AS x(type text, amount bigint, category text, note text, date date, active boolean)`,

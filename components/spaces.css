@@ -7,13 +7,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 5%;
+  padding: 20px;
   color: var(--ink);
-}
-.space-navigation {
   max-width: 1000px;
   margin: auto;
-  padding: 20px;
 }
 .space-manager-title {
   display: flex;
@@ -56,8 +53,9 @@
 .shared-room button {
   font: inherit;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 12px;
+  border-radius: var(--radius-control);
+  padding: 12px 15px;
+  min-height: 44px;
   background: white;
   color: var(--ink);
   min-width: 0;
@@ -76,7 +74,7 @@
   max-width: 960px;
   margin: 20px auto;
   background: var(--lilac);
-  border-radius: 24px;
+  border-radius: var(--radius-card);
   padding: 24px;
 }
 .space-manager form {
@@ -87,7 +85,7 @@
 }
 .space-manager h2,
 .shared-room h2 {
-  font-size: 22px;
+  font-size: 19px;
   margin: 0 0 12px;
 }
 .space-manager p,
@@ -105,7 +103,7 @@
   margin-bottom: 24px;
 }
 .shared-room header h1 {
-  font-size: 36px;
+  font-size: 28px;
   margin: 10px 0;
 }
 .shared-room header > span {
@@ -121,7 +119,7 @@
   color: var(--ink);
   border: 1px solid #cce5cf;
   padding: 28px;
-  border-radius: 26px;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow);
 }
 .shared-balance h2 {
@@ -147,7 +145,7 @@
 .shared-card {
   padding: 24px;
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius: var(--radius-card);
   background: #fff;
   margin-bottom: 20px;
   min-width: 0;
@@ -160,22 +158,31 @@
 .shared-card label {
   display: grid;
   gap: 6px;
-  font-size: 14px;
+  font-size: 13px;
+  margin-top: 0;
 }
-.shared-card form > button,
-.space-manager form > button {
+.shared-card form > button:not([type="button"]):not(.danger-button),
+.space-manager form > button:not([type="button"]):not(.danger-button) {
   background: var(--primary);
   color: white;
   border: 1px solid #654999;
   box-shadow: 0 4px 0 var(--primary-edge);
   min-height: 48px;
 }
-.shared-card form > button:hover:not(:disabled),
-.space-manager form > button:hover:not(:disabled) {
+.shared-card
+  form
+  > button:not([type="button"]):not(.danger-button):hover:not(:disabled),
+.space-manager
+  form
+  > button:not([type="button"]):not(.danger-button):hover:not(:disabled) {
   background: var(--primary-hover);
 }
-.shared-card form > button:active:not(:disabled),
-.space-manager form > button:active:not(:disabled) {
+.shared-card
+  form
+  > button:not([type="button"]):not(.danger-button):active:not(:disabled),
+.space-manager
+  form
+  > button:not([type="button"]):not(.danger-button):active:not(:disabled) {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--primary-edge);
 }
@@ -215,7 +222,46 @@
 }
 .shared-budget progress {
   width: 100%;
-  accent-color: var(--primary);
+  height: 6px;
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #eee9f1;
+  color: var(--green);
+}
+.shared-budget progress::-webkit-progress-bar {
+  background: #eee9f1;
+  border-radius: 8px;
+}
+.shared-budget progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #319080, #8dcbb9);
+  border-radius: 8px;
+}
+.shared-budget progress::-moz-progress-bar {
+  background: var(--green);
+  border-radius: 8px;
+}
+.shared-budget.over-budget progress::-webkit-progress-value {
+  background: #e48b67;
+}
+.shared-budget.over-budget progress::-moz-progress-bar {
+  background: #e48b67;
+}
+.shared-card input {
+  min-height: 48px;
+}
+.shared-card input,
+.space-manager input {
+  font-size: 16px;
+}
+.shared-card label input,
+.shared-card label select {
+  margin-top: 0;
+}
+.space-manager-title,
+.shared-room header h1 {
+  overflow-wrap: anywhere;
 }
 .shared-budget small.over-budget {
   color: var(--red);

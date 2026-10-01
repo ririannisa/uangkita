@@ -97,5 +97,11 @@ export async function readSharedFinance(
     sql`SELECT e.id, e.type, e.amount::float8 AS amount, e.category, e.note, to_char(e.date,'YYYY-MM-DD') AS date, e.active, e.user_id AS "authorId", e.author_name AS "authorName" FROM dompetku.shared_entries e WHERE e.space_id = ${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id = e.space_id AND m.user_id = ${userId}) ORDER BY e.date DESC, e.created_at DESC`,
     sql`SELECT b.id, to_char(b.month,'YYYY-MM') AS month, b.name, b.planned::float8 AS planned FROM dompetku.shared_budgets b WHERE b.space_id = ${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id = b.space_id AND m.user_id = ${userId}) ORDER BY b.name`,
   ]);
-  return { entries, budgets } as SharedFinance;
+  const names =
+    await sql`SELECT c.name FROM dompetku.shared_categories c WHERE c.space_id=${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id=c.space_id AND m.user_id=${userId}) ORDER BY c.name`;
+  return {
+    entries,
+    budgets,
+    categories: names.map((c) => c.name),
+  } as SharedFinance;
 }

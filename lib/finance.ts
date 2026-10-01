@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { categoryActionSchema, categoryNameSchema } from "./categories";
 
 export const money = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -71,6 +72,7 @@ export type Entry = z.infer<typeof entrySchema> & { spaceId?: string };
 export type Budget = z.infer<typeof budgetSchema>;
 export type Plan = z.infer<typeof planSchema>;
 export type FinanceData = {
+  categories?: string[];
   entries: Entry[];
   budgets: Budget[];
   plans: Plan[];
@@ -79,6 +81,7 @@ export const emptyData: FinanceData = { entries: [], budgets: [], plans: [] };
 export const backupSchema = z
   .object({
     version: z.literal(1),
+    categories: z.array(categoryNameSchema).max(2000).default([]),
     entries: z.array(entrySchema).max(10000),
     budgets: z.array(budgetSchema).max(2000),
     plans: z.array(planSchema).max(1212),
@@ -89,6 +92,7 @@ export const backupSchema = z
       data.budgets.map((x) => x.id),
       data.budgets.map((x) => `${x.month}:${normalize(x.name)}`),
       data.plans.map((x) => x.month),
+      data.categories.map(normalize),
     ]) {
       if (new Set(keys).size !== keys.length)
         ctx.addIssue({
@@ -98,6 +102,7 @@ export const backupSchema = z
     }
   });
 export const mutationSchema = z.discriminatedUnion("action", [
+  categoryActionSchema,
   z.object({ action: z.literal("entry"), entry: entrySchema }),
   z.object({ action: z.literal("budget"), budget: budgetSchema }),
   z.object({ action: z.literal("income"), plan: planSchema }),
