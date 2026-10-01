@@ -173,12 +173,6 @@ export default function LoginForm({
               ? "Senang kamu mampir. Yuk, lanjut merawat dompetmu."
               : "Satu akun untuk semua rencana kecil dan mimpi besarmu."}
           </p>
-          {!configured && (
-            <div className="notice">
-              Login sedang disiapkan. Sementara itu, kamu bisa{" "}
-              <Link href="/demo">jelajahi contoh aplikasi</Link>.
-            </div>
-          )}
           <button
             className="google-button full login-google"
             onClick={google}
