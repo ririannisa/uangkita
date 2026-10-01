@@ -1,0 +1,288 @@
+.space-navigation {
+  position: relative;
+  z-index: 20;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 5%;
+  color: var(--ink);
+}
+.space-navigation {
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px;
+}
+.space-manager-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.space-manager-title svg {
+  color: var(--primary);
+}
+.space-list {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+}
+.space-list-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+}
+.space-list-item > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.space-list-item small {
+  display: block;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.space-list-item:hover {
+  border-color: var(--primary);
+}
+.space-manager input,
+.space-manager select,
+.space-manager button,
+.shared-room input,
+.shared-room select,
+.shared-room button {
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: white;
+  color: var(--ink);
+  min-width: 0;
+}
+.space-manager button,
+.shared-room button {
+  cursor: pointer;
+  font-weight: 700;
+}
+.space-manager button:disabled,
+.shared-room button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.space-manager {
+  max-width: 960px;
+  margin: 20px auto;
+  background: var(--lilac);
+  border-radius: 24px;
+  padding: 24px;
+}
+.space-manager form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.space-manager h2,
+.shared-room h2 {
+  font-size: 22px;
+  margin: 0 0 12px;
+}
+.space-manager p,
+.space-note {
+  line-height: 1.65;
+  color: var(--muted);
+}
+.shared-room {
+  max-width: 1000px;
+  margin: auto;
+  padding: 28px 20px 90px;
+  color: var(--ink);
+}
+.shared-room header {
+  margin-bottom: 24px;
+}
+.shared-room header h1 {
+  font-size: 36px;
+  margin: 10px 0;
+}
+.shared-room header > span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+.shared-room header p {
+  margin-bottom: 18px;
+}
+.shared-balance {
+  background: var(--mint);
+  color: var(--ink);
+  border: 1px solid #cce5cf;
+  padding: 28px;
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+.shared-balance h2 {
+  font-size: 38px;
+  margin: 10px 0 24px;
+  overflow-wrap: anywhere;
+}
+.shared-balance div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+.space-note {
+  font-size: 13px;
+  padding: 12px 0;
+}
+.shared-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.shared-card {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: #fff;
+  margin-bottom: 20px;
+  min-width: 0;
+}
+.shared-card form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+.shared-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.shared-card form > button,
+.space-manager form > button {
+  background: var(--primary);
+  color: white;
+  border: 1px solid #654999;
+  box-shadow: 0 4px 0 var(--primary-edge);
+  min-height: 48px;
+}
+.shared-card form > button:hover:not(:disabled),
+.space-manager form > button:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.shared-card form > button:active:not(:disabled),
+.space-manager form > button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--primary-edge);
+}
+.shared-room input:focus,
+.shared-room select:focus,
+.space-manager input:focus,
+.space-manager select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px #9b81c716;
+}
+.shared-card p {
+  line-height: 1.6;
+}
+.space-danger {
+  border-color: #edc5cb;
+}
+.space-danger > button {
+  margin-top: 18px;
+}
+.space-danger button.danger-button {
+  background: #fff0f0;
+  color: var(--red);
+  border: 1px solid #edc5cb;
+  box-shadow: none;
+}
+.space-danger button.danger-button:hover:not(:disabled) {
+  background: #ffe2e6;
+}
+.shared-budget {
+  border-bottom: 1px solid var(--line);
+  padding: 14px 0;
+}
+.shared-budget summary {
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+}
+.shared-budget progress {
+  width: 100%;
+  accent-color: var(--primary);
+}
+.shared-budget small.over-budget {
+  color: var(--red);
+  font-weight: 700;
+}
+.space-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.space-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.space-row small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 5px;
+}
+.space-error {
+  padding: 16px;
+  background: #fff0f0;
+  color: #a72845;
+  margin: 12px 5%;
+  border-radius: 12px;
+}
+.shared-card > details {
+  margin-top: 16px;
+}
+.shared-card summary {
+  cursor: pointer;
+}
+.shared-room button:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+}
+@media (max-width: 650px) {
+  .space-manager {
+    margin: 14px;
+    padding: 18px;
+  }
+  .shared-grid {
+    grid-template-columns: 1fr;
+  }
+  .shared-room {
+    padding: 24px 14px 90px;
+  }
+  .shared-card {
+    padding: 18px;
+  }
+  .space-row {
+    flex-wrap: wrap;
+  }
+  .shared-balance {
+    padding: 22px;
+  }
+  .shared-balance h2 {
+    font-size: 32px;
+  }
+  .shared-balance div {
+    font-size: 13px;
+  }
+  .space-manager form > * {
+    max-width: 100%;
+  }
+}
