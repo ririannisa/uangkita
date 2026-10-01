@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dompetku — Keuangan lebih terarah",
+  title: "UangKita — Keuangan lebih terarah",
   description:
     "Catat transaksi, pantau realisasi anggaran, dan bangun tabunganmu dalam satu tempat.",
 };

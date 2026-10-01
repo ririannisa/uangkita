@@ -93,7 +93,7 @@ export default function LoginForm({
     <main className="login-page">
       <section className="login-story">
         <Link href="/login" className="brand">
-          dompet<span>ku.</span>
+          Uang<span>Kita</span>
         </Link>
         <div className="login-story-content">
           <span className="login-pill">
@@ -269,7 +269,7 @@ export default function LoginForm({
               {busy
                 ? "Sebentar, ya…"
                 : mode === "login"
-                  ? "Masuk ke Dompetku"
+                  ? "Masuk ke UangKita"
                   : "Buat akun"}
               <ArrowRight size={18} />
             </button>

@@ -1,4 +1,4 @@
-# Dompetku
+# UangKita
 
 Aplikasi keuangan pribadi Next.js App Router, React, Neon Postgres, dan managed Neon Auth. Tampilan mengadaptasi pola navigasi pada `design.jpeg` dengan identitas Dompetku. File HTML lama tetap tersedia sebagai referensi.
 

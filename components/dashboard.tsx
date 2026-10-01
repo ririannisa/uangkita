@@ -354,7 +354,7 @@ export default function Dashboard({
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `dompetku-${today()}.json`;
+    link.download = `uangkita-${today()}.json`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -368,7 +368,7 @@ export default function Dashboard({
       const parsed = backupSchema.safeParse(JSON.parse(await file.text()));
       if (!parsed.success)
         throw new Error(
-          "Format tidak sesuai. Gunakan cadangan dari aplikasi Dompetku versi web ini.",
+          "Format tidak sesuai. Gunakan cadangan dari aplikasi UangKita versi web ini.",
         );
       if (
         confirm(
@@ -550,7 +550,7 @@ export default function Dashboard({
       </dialog>
       <aside className="desktop-sidebar">
         <Link href="/" className="brand">
-          dompet<span>ku.</span>
+          Uang<span>Kita</span>
         </Link>
         <p className="sidebar-caption">KEUANGAN PRIBADIMU</p>
         <nav>
@@ -596,7 +596,7 @@ export default function Dashboard({
         <header className={`app-header ${tab === "home" ? "home-header" : ""}`}>
           <div className="header-top">
             <div className="mobile-brand brand">
-              dompet<span>ku.</span>
+              Uang<span>Kita</span>
             </div>
             <span className="desktop-welcome">Ruang keuangan pribadimu</span>
             <div className="header-actions">
@@ -622,7 +622,7 @@ export default function Dashboard({
               <p>
                 {tab === "home"
                   ? "HALO, " + user.name.toUpperCase()
-                  : "DOMPETKU / " + labels[tab].toUpperCase()}
+                  : "UANGKITA / " + labels[tab].toUpperCase()}
               </p>
               <h1>
                 {tab === "home" ? "Keuangan rapi, hati tenang." : labels[tab]}
@@ -1119,7 +1119,7 @@ export default function Dashboard({
                     </span>
                     <div>
                       <strong>Pulihkan cadangan</strong>
-                      <span>Impor file cadangan Dompetku versi web</span>
+                      <span>Impor file cadangan UangKita versi web</span>
                     </div>
                     <ChevronRight size={18} />
                   </button>
@@ -1182,7 +1182,7 @@ export default function Dashboard({
             )}
           </fieldset>
           <p className="page-footer">
-            dompetku. <span>Teman baik keuanganmu.</span>
+            UangKita <span>Teman baik keuanganmu.</span>
           </p>
         </main>
         <nav className="bottom-nav" aria-label="Navigasi utama">
