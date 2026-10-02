@@ -210,8 +210,11 @@ export function figures(data: FinanceData, month: string) {
   };
 }
 
-export function creditFigures(data: FinanceData, month: string) {
-  const income = figures(data, month).income;
+export function creditFigures(
+  data: FinanceData,
+  month: string,
+  income = figures(data, month).income,
+) {
   const categories = new Map<
     string,
     { name: string; borrowed: number; paid: number; outstanding: number }

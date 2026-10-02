@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { memo, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import CategoryManager from "./category-manager";
 import { categoryOptions } from "@/lib/categories";
@@ -142,17 +142,25 @@ export default function Dashboard({
   const categoryDialog = useRef<HTMLDialogElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
   const pending = useRef(false);
-  const f = figures(data, month);
-  const budgets = data.budgets.filter((b) => b.month === month);
-  const monthEntries = data.entries
-    .filter((e) => inActivityMonth(e, month))
-    .sort((a, b) => b.date.localeCompare(a.date));
-  const alerts = budgets.filter((b) => realization(data, b).percent >= 80);
-  const totalPlanned = budgets.reduce((sum, b) => sum + b.planned, 0);
-  const totalSpent = budgets.reduce(
-    (sum, b) => sum + realization(data, b).spent,
-    0,
+  const f = useMemo(() => figures(data, month), [data, month]);
+  const categories = useMemo(() => categoryOptions(data), [data]);
+  const budgets = useMemo(
+    () =>
+      data.budgets
+        .filter((b) => b.month === month)
+        .map((b) => ({ ...b, realization: realization(data, b) })),
+    [data, month],
   );
+  const monthEntries = useMemo(
+    () =>
+      data.entries
+        .filter((e) => inActivityMonth(e, month))
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    [data, month],
+  );
+  const alerts = budgets.filter((b) => b.realization.percent >= 80);
+  const totalPlanned = budgets.reduce((sum, b) => sum + b.planned, 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + b.realization.spent, 0);
   const move = (next: Tab) => {
     setTab(next);
     setQuery("");
@@ -492,8 +500,11 @@ export default function Dashboard({
       </div>
     );
   }
-  function budgetCard(b: Budget, compact = false) {
-    const r = realization(data, b);
+  function budgetCard(
+    b: Budget & { realization: ReturnType<typeof realization> },
+    compact = false,
+  ) {
+    const r = b.realization;
     return (
       <article
         className={`budget-card ${r.remaining < 0 ? "over-budget" : ""}`}
@@ -596,7 +607,7 @@ export default function Dashboard({
           </button>
         </div>
         <CategoryManager
-          names={categoryOptions(data)}
+          names={categories}
           onAdd={(name) => mutate({ action: "category", name })}
         />
       </dialog>
@@ -1422,7 +1433,7 @@ export default function Dashboard({
                     placeholder="Pilih atau tulis kategori"
                   />
                   <datalist id="categories">
-                    {categoryOptions(data).map((name) => (
+                    {categories.map((name) => (
                       <option key={name} value={name} />
                     ))}
                   </datalist>
@@ -1608,15 +1619,22 @@ export default function Dashboard({
   );
 }
 
-function Analytics({ data, month }: { data: FinanceData; month: string }) {
+const Analytics = memo(function Analytics({
+  data,
+  month,
+}: {
+  data: FinanceData;
+  month: string;
+}) {
   const periods = Array.from({ length: 6 }, (_, i) => {
     const date = new Date(`${month}-01T12:00:00Z`);
     date.setUTCMonth(date.getUTCMonth() - 5 + i);
     const key = date.toISOString().slice(0, 7);
-    return { key, ...figures(data, key), credit: creditFigures(data, key) };
+    const totals = figures(data, key);
+    return { key, ...totals, credit: creditFigures(data, key, totals.income) };
   });
   const max = Math.max(1, ...periods.flatMap((p) => [p.income, p.cashExpense]));
-  const credit = creditFigures(data, month);
+  const credit = periods[periods.length - 1].credit;
   const creditMax = Math.max(
     1,
     ...periods.flatMap((p) => [p.credit.borrowed, p.credit.paid]),
@@ -1864,4 +1882,4 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
       </section>
     </>
   );
-}
+});

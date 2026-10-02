@@ -129,6 +129,10 @@ test("credit analytics separates purchases, settlements and historical debt agai
     ],
   };
   const result = creditFigures(updated, "2026-10");
+  assert.deepEqual(
+    creditFigures(updated, "2026-10", figures(updated, "2026-10").income),
+    result,
+  );
   assert.equal(result.income, 1500000);
   assert.equal(result.borrowed, 300000);
   assert.equal(result.paid, 150000);
@@ -140,6 +144,7 @@ test("credit analytics separates purchases, settlements and historical debt agai
     { name: "Transportasi", borrowed: 50000, paid: 50000, outstanding: 0 },
   ]);
   const next = creditFigures(updated, "2026-11");
+  assert.deepEqual(creditFigures(updated, "2026-11", 0), next);
   assert.equal(next.borrowed, 0);
   assert.equal(next.paid, 200000);
   assert.equal(next.outstanding, 250000);
