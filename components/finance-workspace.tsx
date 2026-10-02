@@ -5,11 +5,12 @@ import CategoryManager from "./category-manager";
 import { categoryOptions } from "@/lib/categories";
 import { ArrowLeft, UsersRound, ChevronRight } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
-import { money, today, type FinanceData } from "@/lib/finance";
+import { money, today, inActivityMonth, type FinanceData } from "@/lib/finance";
 import {
   sharedFigures,
   sharedRealization,
   type SharedFinance,
+  type SharedEntry,
 } from "@/lib/shared-finance";
 import type { Space, SpaceDetails, SpaceOverview } from "@/lib/spaces";
 import "./spaces.css";
@@ -319,6 +320,10 @@ function SharedRoom({
   const [busy, setBusy] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [confirmation, setConfirmation] = useState("");
+  const [entryType, setEntryType] = useState("contribution");
+  const [paymentMethod, setPaymentMethod] = useState("direct");
+  const [creditPaid, setCreditPaid] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<SharedEntry | null>(null);
   const endpoint = `/api/spaces/${space.id}/finance`;
   const load = async () => {
     const d = await api(endpoint);
@@ -405,16 +410,22 @@ function SharedRoom({
             <div>
               Pengeluaran bulan ini <strong>{money(totals!.expense)}</strong>
             </div>
+            <div>
+              Pembayaran bulan ini <strong>{money(totals!.cashExpense)}</strong>
+            </div>
           </section>
           <p className="space-note">
-            Semua pengeluaran di sini dibayar dari kas bersama. Kontribusi
+            Kredit mengurangi saldo kas pada tanggal pembayaran ketika lunas.
+            Pengeluaran dan anggaran mengikuti tanggal transaksi. Kontribusi
             otomatis mengurangi saldo pribadi pencatatnya sebagai transfer,
             bukan belanja. Saldo bulan sebelumnya dibawa ke periode berikutnya.
           </p>
           <div className="shared-grid">
             <section className="shared-card">
-              <h2>Catat bareng</h2>
+              <h2>{editingEntry ? "Edit catatan" : "Catat bareng"}</h2>
               <form
+                id="shared-entry-form"
+                key={editingEntry?.id ?? "new"}
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const form = e.currentTarget,
@@ -423,17 +434,34 @@ function SharedRoom({
                     await mutate({
                       action: "entry",
                       entry: {
-                        id: crypto.randomUUID(),
+                        id: editingEntry?.id ?? crypto.randomUUID(),
                         type: f.get("type"),
                         amount: Number(f.get("amount")),
                         category: f.get("category"),
                         note: f.get("note"),
                         date: f.get("date"),
-                        active: true,
+                        active: editingEntry?.active ?? true,
+                        paymentMethod:
+                          entryType === "out" ? paymentMethod : "direct",
+                        dueDate:
+                          entryType === "out" && paymentMethod === "credit"
+                            ? f.get("dueDate")
+                            : null,
+                        paidDate:
+                          entryType === "out" &&
+                          paymentMethod === "credit" &&
+                          creditPaid
+                            ? f.get("paidDate")
+                            : null,
                       },
                     })
-                  )
+                  ) {
                     form.reset();
+                    setEntryType("contribution");
+                    setPaymentMethod("direct");
+                    setCreditPaid(false);
+                    setEditingEntry(null);
+                  }
                 }}
               >
                 <label>
@@ -442,6 +470,11 @@ function SharedRoom({
                     className="app-select"
                     name="type"
                     aria-label="Jenis catatan"
+                    value={entryType}
+                    onChange={(e) => {
+                      setEntryType(e.target.value);
+                      setPaymentMethod("direct");
+                    }}
                   >
                     <option value="contribution">Kontribusi ke kas</option>
                     <option value="out">Pengeluaran kas</option>
@@ -455,6 +488,7 @@ function SharedRoom({
                     min="1"
                     max="1000000000000"
                     step="1"
+                    defaultValue={editingEntry?.amount}
                     required
                   />
                 </label>
@@ -466,6 +500,7 @@ function SharedRoom({
                     maxLength={80}
                     required
                     placeholder="Belanja, listrik, kontribusi…"
+                    defaultValue={editingEntry?.category}
                   />
                 </label>
                 <datalist id="shared-categories">
@@ -478,7 +513,7 @@ function SharedRoom({
                   <input
                     name="date"
                     type="date"
-                    defaultValue={today()}
+                    defaultValue={editingEntry?.date ?? today()}
                     min="2000-01-01"
                     max="2100-12-31"
                     required
@@ -490,9 +525,82 @@ function SharedRoom({
                     name="note"
                     maxLength={300}
                     placeholder="Mis. belanja mingguan"
+                    defaultValue={editingEntry?.note}
                   />
                 </label>
+                {entryType === "out" && (
+                  <>
+                    <label>
+                      Pembayaran
+                      <select
+                        className="app-select"
+                        aria-label="Pembayaran"
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      >
+                        <option value="direct">Langsung (bukan kredit)</option>
+                        <option value="credit">Kredit</option>
+                      </select>
+                    </label>
+                    {paymentMethod === "credit" && (
+                      <>
+                        <label>
+                          Jatuh tempo
+                          <input
+                            name="dueDate"
+                            type="date"
+                            required
+                            min="2000-01-01"
+                            max="2100-12-31"
+                            defaultValue={editingEntry?.dueDate ?? ""}
+                          />
+                        </label>
+                        <label>
+                          Status kredit
+                          <select
+                            className="app-select"
+                            aria-label="Status kredit"
+                            value={creditPaid ? "paid" : "unpaid"}
+                            onChange={(e) =>
+                              setCreditPaid(e.target.value === "paid")
+                            }
+                          >
+                            <option value="unpaid">Belum lunas</option>
+                            <option value="paid">Lunas</option>
+                          </select>
+                        </label>
+                        {creditPaid && (
+                          <label>
+                            Tanggal pembayaran
+                            <input
+                              name="paidDate"
+                              type="date"
+                              required
+                              min="2000-01-01"
+                              max="2100-12-31"
+                              defaultValue={editingEntry?.paidDate ?? ""}
+                            />
+                          </label>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
                 <button disabled={busy}>Simpan catatan</button>
+                {editingEntry && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditingEntry(null);
+                      setEntryType("contribution");
+                      setPaymentMethod("direct");
+                      setCreditPaid(false);
+                    }}
+                  >
+                    Batal edit
+                  </button>
+                )}
               </form>
             </section>
             <section className="shared-card">
@@ -608,11 +716,15 @@ function SharedRoom({
           </div>
           <section className="shared-card">
             <h2>Aktivitas kas</h2>
-            {!data.entries.some((e) => e.date.startsWith(month)) && (
+            <p className="space-note">
+              Termasuk kredit belum lunas dari bulan sebelumnya dan kredit yang
+              dibayar pada bulan ini.
+            </p>
+            {!data.entries.some((e) => inActivityMonth(e, month)) && (
               <p>Belum ada transaksi. Mulai dari kontribusi pertama ✨</p>
             )}
             {data.entries
-              .filter((e) => e.date.startsWith(month))
+              .filter((e) => inActivityMonth(e, month))
               .map((e) => (
                 <div className="space-row" key={e.id}>
                   <span>
@@ -620,6 +732,10 @@ function SharedRoom({
                     <small>
                       {e.type === "contribution" ? "Kontribusi" : "Pengeluaran"}{" "}
                       · {e.category} · {e.authorName} · {e.date}
+                      {e.type === "out" &&
+                        (e.paymentMethod === "credit"
+                          ? ` · Kredit · Jatuh tempo ${e.dueDate?.split("-").reverse().join("/")} · ${e.paidDate ? `Lunas ${e.paidDate.split("-").reverse().join("/")}` : "Belum lunas"}`
+                          : " · Pembayaran langsung")}
                     </small>
                   </span>
                   <strong>
@@ -628,20 +744,44 @@ function SharedRoom({
                   </strong>
                   {((space.role === "owner" && e.type !== "contribution") ||
                     e.authorId === userId) && (
-                    <button
-                      disabled={busy}
-                      aria-label={`Hapus ${e.note || e.category}`}
-                      onClick={() => {
-                        if (
-                          confirm(
-                            "Hapus transaksi ini? Jika berupa kontribusi, transfer pribadi juga dibatalkan. Penghapusan tercatat di riwayat.",
+                    <>
+                      <button
+                        disabled={busy}
+                        aria-label={`Edit ${e.note || e.category}`}
+                        onClick={() => {
+                          setEditingEntry(e);
+                          setEntryType(e.type);
+                          setPaymentMethod(e.paymentMethod ?? "direct");
+                          setCreditPaid(!!e.paidDate);
+                          document
+                            .getElementById("shared-entry-form")
+                            ?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        disabled={busy}
+                        aria-label={`Hapus ${e.note || e.category}`}
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Hapus transaksi ini? Jika berupa kontribusi, transfer pribadi juga dibatalkan. Penghapusan tercatat di riwayat.",
+                            )
                           )
-                        )
-                          mutate({ action: "delete", kind: "entry", id: e.id });
-                      }}
-                    >
-                      Hapus
-                    </button>
+                            mutate({
+                              action: "delete",
+                              kind: "entry",
+                              id: e.id,
+                            });
+                        }}
+                      >
+                        Hapus
+                      </button>
+                    </>
                   )}
                 </div>
               ))}

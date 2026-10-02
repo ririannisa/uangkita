@@ -18,7 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try { document.documentElement.dataset.theme = localStorage.getItem("uangkita-theme") === "dark" ? "dark" : "light"; } catch {}`,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

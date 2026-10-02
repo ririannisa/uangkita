@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     } else if (action.action === "entry") {
       const e = action.entry;
       const rows =
-        await sql`INSERT INTO dompetku.entries (id, user_id, type, amount, category, note, date, active) VALUES (${e.id}, ${id}, ${e.type}, ${e.amount}, ${e.category}, ${e.note}, ${e.date}, ${e.active}) ON CONFLICT (id) DO UPDATE SET type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category, note = EXCLUDED.note, date = EXCLUDED.date, active = EXCLUDED.active WHERE dompetku.entries.user_id = ${id} RETURNING id`;
+        await sql`INSERT INTO dompetku.entries (id, user_id, type, amount, category, note, date, active, payment_method, due_date, paid_date) VALUES (${e.id}, ${id}, ${e.type}, ${e.amount}, ${e.category}, ${e.note}, ${e.date}, ${e.active}, ${e.paymentMethod ?? "direct"}, ${e.dueDate ?? null}, ${e.paidDate ?? null}) ON CONFLICT (id) DO UPDATE SET type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category, note = EXCLUDED.note, date = EXCLUDED.date, active = EXCLUDED.active, payment_method = EXCLUDED.payment_method, due_date = EXCLUDED.due_date, paid_date = EXCLUDED.paid_date WHERE dompetku.entries.user_id = ${id} RETURNING id`;
       if (!rows.length)
         return Response.json(
           { error: "Data tidak ditemukan." },
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
         );
         // All validation happens before replacement; one transaction prevents partial restores.
         queries.push(
-          sql`INSERT INTO dompetku.entries (user_id, type, amount, category, note, date, active) SELECT ${id}, type, amount, category, note, date, active FROM jsonb_to_recordset(${JSON.stringify(action.backup.entries)}::jsonb) AS x(type text, amount bigint, category text, note text, date date, active boolean)`,
+          sql`INSERT INTO dompetku.entries (user_id, type, amount, category, note, date, active, payment_method, due_date, paid_date) SELECT ${id}, type, amount, category, note, date, active, COALESCE("paymentMethod", 'direct'), "dueDate", "paidDate" FROM jsonb_to_recordset(${JSON.stringify(action.backup.entries)}::jsonb) AS x(type text, amount bigint, category text, note text, date date, active boolean, "paymentMethod" text, "dueDate" date, "paidDate" date)`,
         );
         queries.push(
           sql`INSERT INTO dompetku.budgets (user_id, month, name, planned) SELECT ${id}, (month || '-01')::date, name, planned FROM jsonb_to_recordset(${JSON.stringify(action.backup.budgets)}::jsonb) AS x(month text, name text, planned bigint)`,

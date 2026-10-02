@@ -1,10 +1,20 @@
 import { z } from "zod";
 import { categoryActionSchema } from "./categories";
-import { entrySchema, budgetSchema, type Budget, normalize } from "./finance";
+import {
+  entryBaseSchema,
+  validPayment,
+  paymentValidation,
+  budgetSchema,
+  type Budget,
+  normalize,
+  paymentDate,
+} from "./finance";
 
-export const sharedEntrySchema = entrySchema.extend({
-  type: z.enum(["contribution", "out"]),
-});
+export const sharedEntrySchema = entryBaseSchema
+  .extend({
+    type: z.enum(["contribution", "out"]),
+  })
+  .refine(validPayment, paymentValidation);
 export type SharedEntry = z.infer<typeof sharedEntrySchema> & {
   authorId: string;
   authorName: string;
@@ -29,17 +39,28 @@ export function sharedFigures(data: SharedFinance, month: string) {
     (e) => e.active && e.date.slice(0, 7) <= month,
   );
   const monthly = throughMonth.filter((e) => e.date.startsWith(month));
+  const cashExpense = data.entries
+    .filter(
+      (e) => e.active && e.type === "out" && paymentDate(e)?.startsWith(month),
+    )
+    .reduce((sum, e) => sum + e.amount, 0);
   return {
-    balance: throughMonth.reduce(
-      (s, e) => s + (e.type === "contribution" ? e.amount : -e.amount),
-      0,
-    ),
+    balance: data.entries
+      .filter((e) => {
+        const date = paymentDate(e);
+        return e.active && !!date && date.slice(0, 7) <= month;
+      })
+      .reduce(
+        (s, e) => s + (e.type === "contribution" ? e.amount : -e.amount),
+        0,
+      ),
     contributions: monthly
       .filter((e) => e.type === "contribution")
       .reduce((s, e) => s + e.amount, 0),
     expense: monthly
       .filter((e) => e.type === "out")
       .reduce((s, e) => s + e.amount, 0),
+    cashExpense,
   };
 }
 export function sharedRealization(data: SharedFinance, budget: Budget) {

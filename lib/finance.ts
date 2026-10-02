@@ -48,7 +48,7 @@ const dateSchema = z
       v <= "2100-12-31"
     );
   }, "Tanggal tidak valid");
-export const entrySchema = z.object({
+export const entryBaseSchema = z.object({
   id: z.uuid(),
   type: z.enum(["in", "out", "deposit", "withdraw", "fixed"]),
   amount,
@@ -56,7 +56,33 @@ export const entrySchema = z.object({
   note: z.string().trim().max(300),
   date: dateSchema,
   active: z.boolean().default(true),
+  paymentMethod: z.enum(["direct", "credit"]).optional(),
+  dueDate: dateSchema.nullable().optional(),
+  paidDate: dateSchema.nullable().optional(),
 });
+export function validPayment(entry: {
+  type: string;
+  date: string;
+  paymentMethod?: string;
+  dueDate?: string | null;
+  paidDate?: string | null;
+}) {
+  return entry.paymentMethod === "credit"
+    ? (entry.type === "out" || entry.type === "fixed") &&
+        !!entry.dueDate &&
+        entry.dueDate >= entry.date &&
+        (!entry.paidDate || entry.paidDate >= entry.date)
+    : !entry.dueDate && !entry.paidDate;
+}
+export const paymentValidation = {
+  message:
+    "Kredit hanya untuk pengeluaran; jatuh tempo wajib diisi. Jatuh tempo dan tanggal pembayaran tidak boleh sebelum tanggal transaksi.",
+  path: ["dueDate"],
+};
+export const entrySchema = entryBaseSchema.refine(
+  validPayment,
+  paymentValidation,
+);
 export const budgetSchema = z.object({
   id: z.uuid(),
   month: monthSchema,
@@ -116,6 +142,33 @@ export const mutationSchema = z.discriminatedUnion("action", [
 ]);
 export type Mutation = z.infer<typeof mutationSchema>;
 
+// A missing paidDate means the credit has not been settled.
+export function paymentDate(entry: {
+  date: string;
+  paymentMethod?: string;
+  paidDate?: string | null;
+}) {
+  return entry.paymentMethod === "credit" ? entry.paidDate : entry.date;
+}
+export function inActivityMonth(
+  entry: {
+    date: string;
+    paymentMethod?: string;
+    paidDate?: string | null;
+    active: boolean;
+  },
+  month: string,
+) {
+  return (
+    entry.date.startsWith(month) ||
+    !!entry.paidDate?.startsWith(month) ||
+    (entry.active &&
+      entry.paymentMethod === "credit" &&
+      !entry.paidDate &&
+      entry.date.slice(0, 7) <= month)
+  );
+}
+
 export function figures(data: FinanceData, month: string) {
   const entries = data.entries.filter(
     (e) => e.date.startsWith(month) && e.active,
@@ -127,6 +180,15 @@ export function figures(data: FinanceData, month: string) {
   const income =
     (data.plans.find((p) => p.month === month)?.income ?? 0) + sum("in");
   const expense = sum("out") + sum("fixed");
+  const cashExpense = data.entries
+    .filter(
+      (e) =>
+        e.active &&
+        !e.spaceId &&
+        (e.type === "out" || e.type === "fixed") &&
+        paymentDate(e)?.startsWith(month),
+    )
+    .reduce((sum, e) => sum + e.amount, 0);
   const saved = sum("deposit") - sum("withdraw");
   const savings = data.entries.reduce(
     (s, e) =>
@@ -140,10 +202,65 @@ export function figures(data: FinanceData, month: string) {
   return {
     income,
     expense,
+    cashExpense,
     saved,
     savings,
     transferred,
-    balance: income - expense - saved - transferred,
+    balance: income - cashExpense - saved - transferred,
+  };
+}
+
+export function creditFigures(data: FinanceData, month: string) {
+  const income = figures(data, month).income;
+  const categories = new Map<
+    string,
+    { name: string; borrowed: number; paid: number; outstanding: number }
+  >();
+  for (const e of data.entries) {
+    if (
+      !e.active ||
+      e.spaceId ||
+      e.paymentMethod !== "credit" ||
+      (e.type !== "out" && e.type !== "fixed") ||
+      e.date.slice(0, 7) > month
+    )
+      continue;
+    const borrowed = e.date.startsWith(month) ? e.amount : 0;
+    const paid = e.paidDate?.startsWith(month) ? e.amount : 0;
+    const outstanding =
+      !e.paidDate || e.paidDate.slice(0, 7) > month ? e.amount : 0;
+    if (!borrowed && !paid && !outstanding) continue;
+    const key = normalize(e.category);
+    const c = categories.get(key) ?? {
+      name: e.category.trim(),
+      borrowed: 0,
+      paid: 0,
+      outstanding: 0,
+    };
+    c.borrowed += borrowed;
+    c.paid += paid;
+    c.outstanding += outstanding;
+    categories.set(key, c);
+  }
+  const rows = [...categories.values()].sort(
+    (a, b) =>
+      b.outstanding - a.outstanding ||
+      b.borrowed - a.borrowed ||
+      b.paid - a.paid,
+  );
+  const borrowed = rows.reduce((sum, c) => sum + c.borrowed, 0);
+  const paid = rows.reduce((sum, c) => sum + c.paid, 0);
+  const outstanding = rows.reduce((sum, c) => sum + c.outstanding, 0);
+  const percent = (amount: number) =>
+    income > 0 ? Math.round((amount / income) * 1000) / 10 : null;
+  return {
+    income,
+    borrowed,
+    paid,
+    outstanding,
+    borrowedPercent: percent(borrowed),
+    outstandingPercent: percent(outstanding),
+    categories: rows,
   };
 }
 

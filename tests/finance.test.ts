@@ -5,6 +5,8 @@ import {
   backupSchema,
   entrySchema,
   figures,
+  creditFigures,
+  inActivityMonth,
   realization,
   type FinanceData,
 } from "../lib/finance";
@@ -79,6 +81,177 @@ const data: FinanceData = {
     },
   ],
 };
+test("credit analytics separates purchases, settlements and historical debt against all monthly income", () => {
+  const credit = {
+    ...data.entries[0],
+    paymentMethod: "credit" as const,
+    dueDate: "2026-11-01",
+  };
+  const updated: FinanceData = {
+    budgets: [],
+    plans: data.plans,
+    entries: [
+      credit,
+      {
+        ...credit,
+        id: "fixed",
+        type: "fixed",
+        category: "Transportasi",
+        amount: 50000,
+        paidDate: "2026-10-02",
+      },
+      {
+        ...credit,
+        id: "old-paid",
+        date: "2026-09-01",
+        category: "MAKAN",
+        amount: 100000,
+        paidDate: "2026-10-10",
+      },
+      {
+        ...credit,
+        id: "old-unpaid",
+        date: "2026-09-01",
+        amount: 200000,
+        paidDate: "2026-11-01",
+      },
+      { ...credit, id: "inactive", amount: 900000, active: false },
+      { ...credit, id: "transfer", amount: 900000, spaceId: "room" },
+      {
+        ...credit,
+        id: "future",
+        date: "2026-12-01",
+        dueDate: "2027-01-01",
+        amount: 900000,
+      },
+      { ...data.entries[0], id: "direct" },
+      { ...data.entries[0], id: "income", type: "in", amount: 500000 },
+    ],
+  };
+  const result = creditFigures(updated, "2026-10");
+  assert.equal(result.income, 1500000);
+  assert.equal(result.borrowed, 300000);
+  assert.equal(result.paid, 150000);
+  assert.equal(result.outstanding, 450000);
+  assert.equal(result.borrowedPercent, 20);
+  assert.equal(result.outstandingPercent, 30);
+  assert.deepEqual(result.categories, [
+    { name: "makan", borrowed: 250000, paid: 100000, outstanding: 450000 },
+    { name: "Transportasi", borrowed: 50000, paid: 50000, outstanding: 0 },
+  ]);
+  const next = creditFigures(updated, "2026-11");
+  assert.equal(next.borrowed, 0);
+  assert.equal(next.paid, 200000);
+  assert.equal(next.outstanding, 250000);
+  assert.equal(next.borrowedPercent, null);
+  assert.equal(next.outstandingPercent, null);
+  assert.deepEqual(
+    creditFigures({ entries: [], budgets: [], plans: [] }, "2026-10")
+      .categories,
+    [],
+  );
+  assert.equal(
+    creditFigures(
+      { ...data, entries: [{ ...credit, amount: 2500000 }] },
+      "2026-10",
+    ).borrowedPercent,
+    250,
+  );
+});
+test("credit requires a valid due date, survives backup, and preserves spending totals", () => {
+  const credit = {
+    ...data.entries[0],
+    paymentMethod: "credit" as const,
+    dueDate: "2026-11-01",
+  };
+  assert.equal(entrySchema.safeParse(credit).success, true);
+  for (const dueDate of [null, undefined, "2026-09-30", "2026-02-30"])
+    assert.equal(entrySchema.safeParse({ ...credit, dueDate }).success, false);
+  assert.equal(
+    entrySchema.safeParse({ ...credit, dueDate: credit.date }).success,
+    true,
+  );
+  assert.equal(
+    entrySchema.safeParse({ ...credit, type: "deposit" }).success,
+    false,
+  );
+  assert.equal(
+    entrySchema.safeParse({ ...credit, paymentMethod: "direct" }).success,
+    false,
+  );
+  assert.equal(
+    entrySchema.safeParse({ ...credit, paymentMethod: "direct", dueDate: null })
+      .success,
+    true,
+  );
+  const updated = { ...data, entries: [credit, ...data.entries.slice(1)] };
+  const backup = backupSchema.parse(
+    JSON.parse(JSON.stringify({ version: 1, ...updated })),
+  );
+  assert.equal(backup.entries[0].dueDate, credit.dueDate);
+  assert.equal(backup.entries[0].paymentMethod, "credit");
+  assert.equal(
+    figures(updated, "2026-10").expense,
+    figures(data, "2026-10").expense,
+  );
+  assert.equal(
+    figures(updated, "2026-10").balance,
+    figures(data, "2026-10").balance + credit.amount,
+  );
+  assert.equal(realization(updated, data.budgets[0]).spent, 300000);
+});
+test("credit cash follows editable settlement date across months without duplicate expenses", () => {
+  const credit = {
+    ...data.entries[0],
+    paymentMethod: "credit" as const,
+    dueDate: "2026-11-01",
+    paidDate: "2026-11-05",
+  };
+  const updated = { ...data, entries: [credit, ...data.entries.slice(1)] };
+  assert.equal(figures(updated, "2026-10").cashExpense, 50000);
+  assert.equal(figures(updated, "2026-10").balance, 875000);
+  assert.equal(figures(updated, "2026-11").cashExpense, 250000);
+  assert.equal(figures(updated, "2026-11").balance, -250000);
+  assert.equal(figures(updated, "2026-11").expense, 0);
+  assert.equal(realization(updated, data.budgets[0]).spent, 300000);
+  assert.equal(
+    backupSchema.parse({ version: 1, ...updated }).entries[0].paidDate,
+    "2026-11-05",
+  );
+  assert.equal(inActivityMonth(credit, "2026-11"), true);
+  assert.equal(inActivityMonth({ ...credit, paidDate: null }, "2026-12"), true);
+  assert.equal(
+    inActivityMonth({ ...credit, paidDate: null }, "2026-09"),
+    false,
+  );
+  const moved = {
+    ...updated,
+    entries: [{ ...credit, paidDate: "2026-12-01" }, ...data.entries.slice(1)],
+  };
+  assert.equal(figures(moved, "2026-11").cashExpense, 0);
+  assert.equal(figures(moved, "2026-12").cashExpense, 250000);
+  assert.equal(
+    figures({ ...updated, entries: [{ ...credit, paidDate: null }] }, "2026-11")
+      .cashExpense,
+    0,
+  );
+  assert.equal(
+    figures({ ...updated, entries: [{ ...credit, active: false }] }, "2026-11")
+      .cashExpense,
+    0,
+  );
+  for (const paidDate of ["2026-09-30", "2026-02-30"])
+    assert.equal(entrySchema.safeParse({ ...credit, paidDate }).success, false);
+  assert.equal(
+    entrySchema.safeParse({ ...credit, paymentMethod: "direct", dueDate: null })
+      .success,
+    false,
+  );
+  assert.equal(
+    entrySchema.safeParse({ ...credit, paidDate: credit.date }).success,
+    true,
+  );
+});
 test("category options merge defaults, saved names and history without case duplicates", () => {
   const names = categoryOptions({
     ...data,
@@ -128,6 +301,7 @@ test("saldo termasuk tabungan dan pengeluaran tetap aktif; periode tidak bocor",
   assert.deepEqual(figures(data, "2026-10"), {
     income: 1000000,
     expense: 300000,
+    cashExpense: 300000,
     saved: 75000,
     savings: 75000,
     transferred: 0,

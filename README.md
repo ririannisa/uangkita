@@ -72,12 +72,14 @@ Nominal berupa integer rupiah, maksimal Rp1 triliun per catatan. Tanggal divalid
 
 ## Perilaku fitur
 
+- Pengeluaran pribadi (termasuk pengeluaran tetap) dan ruang bersama dapat dicatat dengan pembayaran **Langsung** atau **Kredit**. Kredit wajib memiliki tanggal jatuh tempo pada atau setelah tanggal transaksi; tanggal tampil di aktivitas dan tersimpan dalam cadangan pribadi. Catatan lama dianggap pembayaran langsung. Status kredit **Belum lunas / Lunas** dan tanggal pembayaran dapat diedit. Kredit belum lunas tidak mengurangi saldo; pelunasan mengurangi saldo pada bulan pembayaran aktual, bukan pada bulan jatuh tempo. Pengeluaran dan realisasi anggaran tetap mengikuti tanggal transaksi. Aktivitas menampilkan kredit belum lunas dari bulan sebelumnya dan kredit yang dibayar pada bulan pilihan. Grafik arus kas mengikuti pembayaran aktual. Cadangan pribadi menyimpan tanggal pembayaran. Kredit lama tanpa tanggal pembayaran dianggap belum lunas dan perlu diperbarui sesuai riwayat pembayaran. Cicilan parsial belum dilacak. Jalankan `npm run db:migrate` untuk menerapkan `004_credit.sql` dan `005_credit_payment.sql` sebelum memakai fitur pada database.
 - Saldo **bulanan** = pendapatan tetap + pemasukan tambahan − pengeluaran − pengeluaran tetap aktif − setoran + penarikan. Saldo bulan sebelumnya tidak otomatis dibawa ke bulan berikutnya.
 - Anggaran/pendapatan berlaku per bulan. Pengeluaran tetap dicatat untuk bulan yang dipilih; belum ada scheduler pencatatan tagihan otomatis. Ini menjaga angka historis saat nilai tagihan berubah.
 - Realisasi kategori mencakup pengeluaran dan pengeluaran tetap aktif, mencocokkan nama kategori tanpa membedakan huruf besar/kecil atau spasi tepi. Mengubah nama kategori anggaran mengubah pencocokan; transaksi lama tidak diubah otomatis.
 - Rincian anggaran diurutkan dari transaksi terbesar; peringatan mulai 80%, status berlebih saat nominal melampaui batas.
 - Saldo tabungan dihitung dari seluruh riwayat, bukan angka saldo terpisah. Form menarik tabungan membatasi nominal sesuai saldo yang sedang terlihat; penghapusan/edit riwayat dapat mengubah saldo historis.
 - Grafik enam bulan, pencarian/filter transaksi, edit/hapus, pengeluaran tetap aktif/nonaktif, backup JSON, dan reset data tersedia.
+- Analitik kredit menampilkan grafik kredit baru dan pelunasan enam bulan, rasio kredit baru serta sisa belum lunas terhadap pemasukan bulan pilihan (pendapatan tetap + pemasukan tambahan), dan rincian kategori. Kredit baru mengikuti tanggal transaksi; pelunasan mengikuti tanggal pembayaran; sisa belum lunas dihitung sampai akhir bulan pilihan dan mencakup kredit bulan sebelumnya. Pemasukan nol ditampilkan tanpa persentase.
 - Impor menerima format backup aplikasi Next.js versi 1. Cadangan/localStorage HTML lama belum diimpor otomatis; data HTML tetap utuh.
 - Login belum mencakup antarmuka reset password. Kebijakan verifikasi email dan Google diatur pada Neon Auth.
 

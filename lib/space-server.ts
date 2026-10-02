@@ -94,7 +94,7 @@ export async function readSharedFinance(
 ): Promise<SharedFinance> {
   const sql = getSql();
   const [entries, budgets] = await sql.transaction([
-    sql`SELECT e.id, e.type, e.amount::float8 AS amount, e.category, e.note, to_char(e.date,'YYYY-MM-DD') AS date, e.active, e.user_id AS "authorId", e.author_name AS "authorName" FROM dompetku.shared_entries e WHERE e.space_id = ${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id = e.space_id AND m.user_id = ${userId}) ORDER BY e.date DESC, e.created_at DESC`,
+    sql`SELECT e.id, e.type, e.amount::float8 AS amount, e.category, e.note, to_char(e.date,'YYYY-MM-DD') AS date, e.active, e.payment_method AS "paymentMethod", to_char(e.due_date,'YYYY-MM-DD') AS "dueDate", to_char(e.paid_date,'YYYY-MM-DD') AS "paidDate", e.user_id AS "authorId", e.author_name AS "authorName" FROM dompetku.shared_entries e WHERE e.space_id = ${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id = e.space_id AND m.user_id = ${userId}) ORDER BY e.date DESC, e.created_at DESC`,
     sql`SELECT b.id, to_char(b.month,'YYYY-MM') AS month, b.name, b.planned::float8 AS planned FROM dompetku.shared_budgets b WHERE b.space_id = ${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id = b.space_id AND m.user_id = ${userId}) ORDER BY b.name`,
   ]);
   const names =

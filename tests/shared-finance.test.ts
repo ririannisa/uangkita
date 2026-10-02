@@ -60,7 +60,36 @@ test("shared cash carries forward but excludes future months", () => {
     balance: 200,
     contributions: 0,
     expense: 800,
+    cashExpense: 800,
   });
+});
+test("shared credit settlement changes cash in the payment month and carries forward", () => {
+  const updated: SharedFinance = {
+    ...data,
+    entries: data.entries.map((e) =>
+      e.id === "b"
+        ? {
+            ...e,
+            paymentMethod: "credit",
+            dueDate: "2026-11-01",
+            paidDate: "2026-11-05",
+          }
+        : e,
+    ),
+  };
+  assert.equal(sharedFigures(updated, "2026-10").balance, 500);
+  assert.equal(sharedFigures(updated, "2026-10").expense, 800);
+  assert.equal(sharedFigures(updated, "2026-10").cashExpense, 500);
+  assert.equal(sharedFigures(updated, "2026-11").balance, 2200);
+  assert.equal(sharedFigures(updated, "2026-11").expense, 0);
+  assert.equal(sharedFigures(updated, "2026-11").cashExpense, 300);
+  assert.equal(sharedFigures(updated, "2026-12").balance, 2200);
+  const unpaid: SharedFinance = {
+    ...updated,
+    entries: updated.entries.map((e) => ({ ...e, paidDate: null })),
+  };
+  assert.equal(sharedFigures(unpaid, "2026-11").balance, 2500);
+  assert.equal(sharedFigures(unpaid, "2026-11").cashExpense, 0);
 });
 test("budget drilldown identifies biggest expense and contributor", () => {
   const r = sharedRealization(data, {
@@ -86,4 +115,26 @@ test("shared mutation rejects personal operations and invalid contributions", ()
     }).success,
     false,
   );
+});
+test("shared credit is allowed for expenses and rejected for contributions", () => {
+  const entry = {
+    ...data.entries[1],
+    id: "00000000-0000-4000-8000-000000000001",
+    paymentMethod: "credit",
+    dueDate: "2026-11-01",
+  };
+  assert.equal(
+    sharedMutationSchema.safeParse({ action: "entry", entry }).success,
+    true,
+  );
+  for (const invalid of [
+    { ...entry, dueDate: null },
+    { ...entry, dueDate: "2026-09-30" },
+    { ...entry, type: "contribution" },
+  ])
+    assert.equal(
+      sharedMutationSchema.safeParse({ action: "entry", entry: invalid })
+        .success,
+      false,
+    );
 });

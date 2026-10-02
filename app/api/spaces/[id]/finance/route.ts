@@ -39,7 +39,11 @@ export async function POST(request: Request, ctx: Context) {
     const { user, space } = await context(ctx);
     const parsed = sharedMutationSchema.safeParse(await request.json());
     if (!parsed.success)
-      throw new SpaceError("Transaksi atau anggaran tidak valid.", 400);
+      throw new SpaceError(
+        parsed.error.issues[0]?.message ??
+          "Transaksi atau anggaran tidak valid.",
+        400,
+      );
     const a = parsed.data,
       sql = getSql();
     let rows;
@@ -59,7 +63,7 @@ export async function POST(request: Request, ctx: Context) {
     } else if (a.action === "entry") {
       const e = a.entry;
       rows =
-        await sql`WITH changed AS (INSERT INTO dompetku.shared_entries(id,space_id,user_id,author_name,type,amount,category,note,date,active) SELECT ${e.id},s.id,${user.id},${user.name},${e.type},${e.amount},${e.category},${e.note},${e.date},${e.active} FROM dompetku.spaces s JOIN dompetku.space_members m ON m.space_id=s.id WHERE s.id=${space.id} AND m.user_id=${user.id} ON CONFLICT(id) DO UPDATE SET type=EXCLUDED.type,amount=EXCLUDED.amount,category=EXCLUDED.category,note=EXCLUDED.note,date=EXCLUDED.date,active=EXCLUDED.active WHERE dompetku.shared_entries.space_id=${space.id} AND (dompetku.shared_entries.user_id=${user.id} OR (dompetku.shared_entries.type <> 'contribution' AND EXCLUDED.type <> 'contribution' AND EXISTS(SELECT 1 FROM dompetku.spaces WHERE id=${space.id} AND owner_id=${user.id}))) RETURNING id) INSERT INTO dompetku.space_events(space_id,actor_id,actor_name,action,detail) SELECT ${space.id},${user.id},${user.name},'Simpan transaksi',${JSON.stringify({ category: e.category, amount: e.amount })}::jsonb FROM changed RETURNING id`;
+        await sql`WITH changed AS (INSERT INTO dompetku.shared_entries(id,space_id,user_id,author_name,type,amount,category,note,date,active,payment_method,due_date,paid_date) SELECT ${e.id},s.id,${user.id},${user.name},${e.type},${e.amount},${e.category},${e.note},${e.date},${e.active},${e.paymentMethod ?? "direct"},${e.dueDate ?? null}::date,${e.paidDate ?? null}::date FROM dompetku.spaces s JOIN dompetku.space_members m ON m.space_id=s.id WHERE s.id=${space.id} AND m.user_id=${user.id} ON CONFLICT(id) DO UPDATE SET type=EXCLUDED.type,amount=EXCLUDED.amount,category=EXCLUDED.category,note=EXCLUDED.note,date=EXCLUDED.date,active=EXCLUDED.active,payment_method=EXCLUDED.payment_method,due_date=EXCLUDED.due_date,paid_date=EXCLUDED.paid_date WHERE dompetku.shared_entries.space_id=${space.id} AND (dompetku.shared_entries.user_id=${user.id} OR (dompetku.shared_entries.type <> 'contribution' AND EXCLUDED.type <> 'contribution' AND EXISTS(SELECT 1 FROM dompetku.spaces WHERE id=${space.id} AND owner_id=${user.id}))) RETURNING id) INSERT INTO dompetku.space_events(space_id,actor_id,actor_name,action,detail) SELECT ${space.id},${user.id},${user.name},'Simpan transaksi',${JSON.stringify({ category: e.category, amount: e.amount, paymentMethod: e.paymentMethod ?? "direct", dueDate: e.dueDate ?? null, paidDate: e.paidDate ?? null })}::jsonb FROM changed RETURNING id`;
     } else if (a.action === "budget") {
       const b = a.budget;
       rows =

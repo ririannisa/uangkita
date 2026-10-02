@@ -19,10 +19,12 @@ import {
   EyeOff,
   Home,
   LogOut,
+  Moon,
   Plus,
   ReceiptText,
   Search,
   ShieldCheck,
+  Sun,
   Target,
   Trash2,
   Upload,
@@ -31,7 +33,7 @@ import {
   Tags,
   Wallet,
   X,
-  PiggyBank,
+  createLucideIcon,
   Utensils,
   Bus,
   ShoppingBag,
@@ -44,6 +46,8 @@ import {
   dateLabel,
   emptyData,
   figures,
+  creditFigures,
+  inActivityMonth,
   money,
   monthLabel,
   mutationSchema,
@@ -55,6 +59,21 @@ import {
   type FinanceData,
   type Mutation,
 } from "@/lib/finance";
+
+const Chicken = createLucideIcon("chicken", [
+  ["path", { d: "M14 5c-2-3 1-4 2-2 1-2 4-1 2 2", key: "comb" }],
+  [
+    "path",
+    {
+      d: "M13 10V8a4 4 0 0 1 8 0v4a7 7 0 0 1-7 7H9a6 6 0 0 1-6-6L2 7l5 3a6 6 0 0 1 6 0Z",
+      key: "body",
+    },
+  ],
+  ["path", { d: "m21 8 2 1-2 1", key: "beak" }],
+  ["path", { d: "M18 8h.01", key: "eye" }],
+  ["path", { d: "M8 12c0 3 3 5 6 2", key: "wing" }],
+  ["path", { d: "M9 19v3H7m7-3v3h-2", key: "feet" }],
+]);
 
 type Tab = "home" | "activity" | "budget" | "savings" | "analytics" | "account";
 type Modal =
@@ -85,7 +104,7 @@ function CategoryIcon({ name, size = 20 }: { name: string; size?: number }) {
       : /belanja/i.test(name)
         ? ShoppingBag
         : /tabungan/i.test(name)
-          ? PiggyBank
+          ? Chicken
           : Wallet;
   return <Icon size={size} strokeWidth={1.8} />;
 }
@@ -113,6 +132,8 @@ export default function Dashboard({
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState<Modal | null>(null);
   const [entryType, setEntryType] = useState<Entry["type"]>("out");
+  const [paymentMethod, setPaymentMethod] = useState("direct");
+  const [creditPaid, setCreditPaid] = useState(false);
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -124,7 +145,7 @@ export default function Dashboard({
   const f = figures(data, month);
   const budgets = data.budgets.filter((b) => b.month === month);
   const monthEntries = data.entries
-    .filter((e) => e.date.startsWith(month))
+    .filter((e) => inActivityMonth(e, month))
     .sort((a, b) => b.date.localeCompare(a.date));
   const alerts = budgets.filter((b) => realization(data, b).percent >= 80);
   const totalPlanned = budgets.reduce((sum, b) => sum + b.planned, 0);
@@ -152,7 +173,8 @@ export default function Dashboard({
     const parsed = mutationSchema.safeParse(action);
     if (!parsed.success) {
       setFormError(
-        "Periksa nominal, kategori, dan tanggal. Nominal maksimal Rp1 triliun.",
+        parsed.error.issues[0]?.message ??
+          "Periksa nominal, kategori, dan tanggal.",
       );
       return false;
     }
@@ -259,7 +281,13 @@ export default function Dashboard({
   function open(next: Modal) {
     setModal(next);
     setFormError("");
+    setCreditPaid(next.kind === "entry" && !!next.entry?.paidDate);
     setEntryType(next.kind === "entry" ? next.type : "out");
+    setPaymentMethod(
+      next.kind === "entry"
+        ? (next.entry?.paymentMethod ?? "direct")
+        : "direct",
+    );
     setAmount(
       String(
         next.kind === "entry"
@@ -302,6 +330,22 @@ export default function Dashboard({
           note: String(form.get("note") ?? "").trim(),
           date: String(form.get("date")),
           active: entryType === "fixed" ? (modal.entry?.active ?? true) : true,
+          paymentMethod:
+            (entryType === "out" || entryType === "fixed") &&
+            paymentMethod === "credit"
+              ? "credit"
+              : "direct",
+          dueDate:
+            (entryType === "out" || entryType === "fixed") &&
+            paymentMethod === "credit"
+              ? String(form.get("dueDate"))
+              : null,
+          paidDate:
+            (entryType === "out" || entryType === "fixed") &&
+            paymentMethod === "credit" &&
+            creditPaid
+              ? String(form.get("paidDate"))
+              : null,
         },
       };
     if (
@@ -318,7 +362,8 @@ export default function Dashboard({
     }
     if (await mutate(action)) {
       dialog.current?.close();
-      if (action.action === "entry") setMonth(action.entry.date.slice(0, 7));
+      if (action.action === "entry")
+        setMonth((action.entry.paidDate ?? action.entry.date).slice(0, 7));
     }
   }
 
@@ -403,6 +448,13 @@ export default function Dashboard({
               {e.category} · {dateLabel(e.date)}
               {!e.active ? " · Nonaktif" : ""}
             </span>
+            {(e.type === "out" || e.type === "fixed") && !e.spaceId && (
+              <span>
+                {e.paymentMethod === "credit"
+                  ? `Kredit · Jatuh tempo ${e.dueDate?.split("-").reverse().join("/")} · ${e.paidDate ? `Lunas ${e.paidDate.split("-").reverse().join("/")}` : "Belum lunas"}`
+                  : "Pembayaran langsung"}
+              </span>
+            )}
           </div>
           <div className="transaction-value">
             <strong
@@ -559,7 +611,7 @@ export default function Dashboard({
               ["home", Home],
               ["activity", ReceiptText],
               ["budget", Target],
-              ["savings", PiggyBank],
+              ["savings", Chicken],
               ["analytics", ChartNoAxesCombined],
               ["account", UserRound],
             ] as const
@@ -600,6 +652,27 @@ export default function Dashboard({
             </div>
             <span className="desktop-welcome">Ruang keuangan pribadimu</span>
             <div className="header-actions">
+              <button
+                type="button"
+                className="icon-button theme-toggle"
+                aria-label="Ganti tema terang atau gelap"
+                title="Ganti tema terang atau gelap"
+                onClick={() => {
+                  const theme =
+                    document.documentElement.dataset.theme === "dark"
+                      ? "light"
+                      : "dark";
+                  document.documentElement.dataset.theme = theme;
+                  try {
+                    localStorage.setItem("uangkita-theme", theme);
+                  } catch {
+                    // The toggle still works when browser storage is unavailable.
+                  }
+                }}
+              >
+                <Moon size={20} className="theme-moon" />
+                <Sun size={20} className="theme-sun" />
+              </button>
               <button
                 className="icon-button"
                 aria-label="Lihat peringatan anggaran"
@@ -740,7 +813,7 @@ export default function Dashboard({
                   </button>
                   <button onClick={() => move("savings")}>
                     <span className="mini-icon lavender">
-                      <PiggyBank size={19} />
+                      <Chicken size={19} />
                     </span>
                     <div>
                       <span>Ditabung bulan ini</span>
@@ -748,6 +821,14 @@ export default function Dashboard({
                     </div>
                   </button>
                 </div>
+                {f.cashExpense !== f.expense && (
+                  <p className="small muted">
+                    Pembayaran bulan ini:{" "}
+                    {hidden ? "Rp ••••••••" : money(f.cashExpense)}. Saldo
+                    mengikuti tanggal pembayaran; pengeluaran mengikuti tanggal
+                    transaksi.
+                  </p>
+                )}
                 <section className="section">
                   <div className="section-heading">
                     <h2>Menu utama</h2>
@@ -758,7 +839,7 @@ export default function Dashboard({
                       [
                         ["Catat transaksi", ReceiptText, "entry", "sky"],
                         ["Anggaran", Target, "budget", "mint"],
-                        ["Tabungan", PiggyBank, "savings", "lavender"],
+                        ["Tabungan", Chicken, "savings", "lavender"],
                         ["Analitik", ChartNoAxesCombined, "analytics", "peach"],
                         ["Pengeluaran tetap", Wallet, "fixed", "sky"],
                         ["Pendapatan", ArrowDownLeft, "income", "mint"],
@@ -874,7 +955,7 @@ export default function Dashboard({
                       {transactionRows(monthEntries.slice(0, 5), false)}
                     </div>
                     <div className="saving-teaser">
-                      <PiggyBank size={32} />
+                      <Chicken size={32} />
                       <div>
                         <span>Langkah kecilmu sudah terkumpul</span>
                         <strong>{hidden ? "••••••" : money(f.savings)}</strong>
@@ -897,7 +978,8 @@ export default function Dashboard({
                   <div>
                     <h2>Semua aktivitas</h2>
                     <p className="muted small">
-                      Setiap catatan membuat rencana lebih jelas.
+                      Termasuk kredit belum lunas dari bulan sebelumnya dan
+                      kredit yang dibayar pada bulan ini.
                     </p>
                   </div>
                   <button
@@ -1030,7 +1112,7 @@ export default function Dashboard({
               <>
                 <div className="savings-card">
                   <div className="savings-art">
-                    <PiggyBank size={50} strokeWidth={1.4} />
+                    <Chicken size={50} strokeWidth={1.4} />
                   </div>
                   <p>Total tabungan · seluruh periode</p>
                   <h2>{money(f.savings)}</h2>
@@ -1373,10 +1455,75 @@ export default function Dashboard({
                       }
                     />
                   </label>
+                  {(entryType === "out" || entryType === "fixed") && (
+                    <>
+                      <label>
+                        Pembayaran
+                        <select
+                          className="app-select"
+                          aria-label="Pembayaran"
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        >
+                          <option value="direct">
+                            Langsung (bukan kredit)
+                          </option>
+                          <option value="credit">Kredit</option>
+                        </select>
+                      </label>
+                      {paymentMethod === "credit" && (
+                        <>
+                          <label>
+                            Jatuh tempo
+                            <input
+                              name="dueDate"
+                              type="date"
+                              required
+                              min="2000-01-01"
+                              max="2100-12-31"
+                              defaultValue={modal.entry?.dueDate ?? ""}
+                            />
+                          </label>
+                          <label>
+                            Status kredit
+                            <select
+                              className="app-select"
+                              aria-label="Status kredit"
+                              value={creditPaid ? "paid" : "unpaid"}
+                              onChange={(e) =>
+                                setCreditPaid(e.target.value === "paid")
+                              }
+                            >
+                              <option value="unpaid">Belum lunas</option>
+                              <option value="paid">Lunas</option>
+                            </select>
+                          </label>
+                          {creditPaid && (
+                            <label>
+                              Tanggal pembayaran
+                              <input
+                                name="paidDate"
+                                type="date"
+                                required
+                                min="2000-01-01"
+                                max="2100-12-31"
+                                defaultValue={modal.entry?.paidDate ?? ""}
+                              />
+                            </label>
+                          )}
+                        </>
+                      )}
+                      <p className="small muted">
+                        Pengeluaran dan anggaran mengikuti tanggal transaksi.
+                        Kredit mengurangi saldo saat lunas, sesuai tanggal
+                        pembayaran.
+                      </p>
+                    </>
+                  )}
                   {entryType === "fixed" && (
                     <p className="small muted">
-                      Mengurangi saldo dan dihitung dalam realisasi anggaran
-                      kategori pada bulan yang dipilih.
+                      Dihitung dalam realisasi anggaran kategori pada bulan
+                      transaksi.
                     </p>
                   )}
                 </>
@@ -1466,9 +1613,18 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
     const date = new Date(`${month}-01T12:00:00Z`);
     date.setUTCMonth(date.getUTCMonth() - 5 + i);
     const key = date.toISOString().slice(0, 7);
-    return { key, ...figures(data, key) };
+    return { key, ...figures(data, key), credit: creditFigures(data, key) };
   });
-  const max = Math.max(1, ...periods.flatMap((p) => [p.income, p.expense]));
+  const max = Math.max(1, ...periods.flatMap((p) => [p.income, p.cashExpense]));
+  const credit = creditFigures(data, month);
+  const creditMax = Math.max(
+    1,
+    ...periods.flatMap((p) => [p.credit.borrowed, p.credit.paid]),
+  );
+  const percentLabel = (value: number | null) =>
+    value === null
+      ? "Belum ada pemasukan"
+      : `${value.toLocaleString("id-ID")}% dari pemasukan`;
   const grouped = new Map<string, { name: string; amount: number }>();
   for (const e of data.entries.filter(
     (e) =>
@@ -1506,7 +1662,7 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
       <section className="panel chart-panel">
         <h2>Arus kas 6 bulan</h2>
         <p className="muted small">
-          Pendapatan dan pengeluaran, termasuk pengeluaran tetap.
+          Pendapatan dan pembayaran aktual, termasuk pelunasan kredit.
         </p>
         <div className="chart-legend">
           <span>
@@ -1527,8 +1683,8 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
                 />
                 <div
                   className="bar expense-bar"
-                  style={{ height: `${(p.expense / max) * 100}%` }}
-                  title={`Pengeluaran ${money(p.expense)}`}
+                  style={{ height: `${(p.cashExpense / max) * 100}%` }}
+                  title={`Pembayaran ${money(p.cashExpense)}`}
                 />
               </div>
               <span>{monthLabel(p.key).split(" ")[0].slice(0, 3)}</span>
@@ -1551,12 +1707,130 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
                 <tr key={p.key}>
                   <td>{monthLabel(p.key)}</td>
                   <td>{money(p.income)}</td>
-                  <td>{money(p.expense)}</td>
+                  <td>{money(p.cashExpense)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </details>
+      </section>
+      <section
+        className="panel chart-panel credit-analytics"
+        aria-labelledby="credit-analytics-title"
+      >
+        <h2 id="credit-analytics-title">Kredit & pemasukan</h2>
+        <p className="muted small">
+          {monthLabel(month)} · Pemasukan {money(credit.income)}
+        </p>
+        <div className="budget-overview">
+          <div>
+            <span>Kredit baru bulan ini</span>
+            <strong>{money(credit.borrowed)}</strong>
+            <span>{percentLabel(credit.borrowedPercent)}</span>
+          </div>
+          <div>
+            <span>Belum lunas akhir bulan</span>
+            <strong>{money(credit.outstanding)}</strong>
+            <span>{percentLabel(credit.outstandingPercent)}</span>
+          </div>
+        </div>
+        <p className="muted small">
+          Lunas bulan ini: {money(credit.paid)}. Sisa belum lunas mencakup
+          kredit bulan sebelumnya; status mengikuti pembayaran sampai akhir
+          bulan pilihan.
+        </p>
+        {credit.income === 0 && (
+          <p className="muted small">
+            Persentase belum dapat dihitung karena pemasukan bulan ini nol.
+          </p>
+        )}
+        <h3>Grafik kredit 6 bulan</h3>
+        <div className="chart-legend">
+          <span>
+            <i className="expense-dot" /> Kredit baru
+          </span>
+          <span>
+            <i className="income-dot" /> Lunas
+          </span>
+        </div>
+        <div
+          className="bar-chart"
+          role="img"
+          aria-label="Grafik kredit baru dan pelunasan selama enam bulan; angka lengkap tersedia di bawah"
+        >
+          {periods.map((p) => (
+            <div className="bar-column" key={p.key}>
+              <div className="bars">
+                <div
+                  className="bar expense-bar"
+                  style={{
+                    height: `${(p.credit.borrowed / creditMax) * 100}%`,
+                  }}
+                  title={`Kredit baru ${money(p.credit.borrowed)}`}
+                />
+                <div
+                  className="bar income-bar"
+                  style={{ height: `${(p.credit.paid / creditMax) * 100}%` }}
+                  title={`Lunas ${money(p.credit.paid)}`}
+                />
+              </div>
+              <span>{monthLabel(p.key).split(" ")[0].slice(0, 3)}</span>
+            </div>
+          ))}
+        </div>
+        <details className="chart-table">
+          <summary>Lihat angka kredit lengkap</summary>
+          <table>
+            <caption>Kredit enam bulan</caption>
+            <thead>
+              <tr>
+                <th>Bulan</th>
+                <th>Kredit baru</th>
+                <th>Lunas</th>
+                <th>Belum lunas</th>
+                <th>Kredit baru / pemasukan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {periods.map((p) => (
+                <tr key={p.key}>
+                  <td>{monthLabel(p.key)}</td>
+                  <td>{money(p.credit.borrowed)}</td>
+                  <td>{money(p.credit.paid)}</td>
+                  <td>{money(p.credit.outstanding)}</td>
+                  <td>{percentLabel(p.credit.borrowedPercent)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
+        <div className="chart-table">
+          {credit.categories.length ? (
+            <table>
+              <caption>Kategori kredit · {monthLabel(month)}</caption>
+              <thead>
+                <tr>
+                  <th>Kategori</th>
+                  <th>Kredit baru</th>
+                  <th>Lunas bulan ini</th>
+                  <th>Belum lunas</th>
+                </tr>
+              </thead>
+              <tbody>
+                {credit.categories.map((c) => (
+                  <tr key={normalize(c.name)}>
+                    <th scope="row">{c.name}</th>
+                    <td>{money(c.borrowed)}</td>
+                    <td>{money(c.paid)}</td>
+                    <td>{money(c.outstanding)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="muted small">Belum ada kredit pada periode ini.</p>
+          )}
+        </div>
       </section>
       <section className="panel chart-panel">
         <h2>Sebaran pengeluaran</h2>
