@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "UangKita — Keuangan lebih terarah",
@@ -27,6 +29,8 @@ export default function RootLayout({
         />
       </head>
       <body>{children}</body>
+      <SpeedInsights />
+      <Analytics />
     </html>
   );
 }
