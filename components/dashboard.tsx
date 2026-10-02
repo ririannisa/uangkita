@@ -1649,7 +1649,7 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
   ).getDate();
   return (
     <>
-      <div className="budget-overview">
+      <div className="budget-overview analytics-overview">
         <div>
           <span>Kategori terbesar</span>
           <strong>{categories[0]?.name ?? "Belum ada"}</strong>
@@ -1722,7 +1722,7 @@ function Analytics({ data, month }: { data: FinanceData; month: string }) {
         <p className="muted small">
           {monthLabel(month)} · Pemasukan {money(credit.income)}
         </p>
-        <div className="budget-overview">
+        <div className="budget-overview analytics-overview">
           <div>
             <span>Kredit baru bulan ini</span>
             <strong>{money(credit.borrowed)}</strong>
