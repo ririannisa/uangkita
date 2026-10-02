@@ -138,3 +138,25 @@ test("shared credit is allowed for expenses and rejected for contributions", () 
       false,
     );
 });
+test("shared partial payments carry cash forward with the remaining credit excluded", () => {
+  const updated: SharedFinance = {
+    ...data,
+    entries: data.entries.map((e) =>
+      e.id === "b"
+        ? {
+            ...e,
+            paymentMethod: "credit",
+            dueDate: "2026-11-01",
+            creditPayments: [
+              { id: crypto.randomUUID(), date: "2026-10-02", amount: 100 },
+              { id: crypto.randomUUID(), date: "2026-11-01", amount: 150 },
+            ],
+          }
+        : e,
+    ),
+  };
+  assert.equal(sharedFigures(updated, "2026-10").balance, 400);
+  assert.equal(sharedFigures(updated, "2026-10").cashExpense, 600);
+  assert.equal(sharedFigures(updated, "2026-11").balance, 2250);
+  assert.equal(sharedFigures(updated, "2026-11").cashExpense, 150);
+});

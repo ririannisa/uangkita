@@ -2,10 +2,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Dashboard from "./dashboard";
 import CategoryManager from "./category-manager";
+import CreditPaymentFields from "./credit-payment-fields";
 import { categoryOptions } from "@/lib/categories";
 import { ArrowLeft, UsersRound, ChevronRight } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
-import { money, today, inActivityMonth, type FinanceData } from "@/lib/finance";
+import {
+  money,
+  today,
+  inActivityMonth,
+  creditStatus,
+  remainingCredit,
+  type CreditPayment,
+  type FinanceData,
+} from "@/lib/finance";
 import {
   sharedFigures,
   sharedRealization,
@@ -323,6 +332,8 @@ function SharedRoom({
   const [entryType, setEntryType] = useState("contribution");
   const [paymentMethod, setPaymentMethod] = useState("direct");
   const [creditPaid, setCreditPaid] = useState(false);
+  const [creditPayments, setCreditPayments] = useState<CreditPayment[]>([]);
+  const [entryAmount, setEntryAmount] = useState(0);
   const [editingEntry, setEditingEntry] = useState<SharedEntry | null>(null);
   const endpoint = `/api/spaces/${space.id}/finance`;
   const load = async () => {
@@ -415,10 +426,11 @@ function SharedRoom({
             </div>
           </section>
           <p className="space-note">
-            Kredit mengurangi saldo kas pada tanggal pembayaran ketika lunas.
-            Pengeluaran dan anggaran mengikuti tanggal transaksi. Kontribusi
-            otomatis mengurangi saldo pribadi pencatatnya sebagai transfer,
-            bukan belanja. Saldo bulan sebelumnya dibawa ke periode berikutnya.
+            Setiap pembayaran kredit mengurangi saldo kas sesuai nominal dan
+            tanggalnya. Pengeluaran dan anggaran mengikuti tanggal transaksi.
+            Kontribusi otomatis mengurangi saldo pribadi pencatatnya sebagai
+            transfer, bukan belanja. Saldo bulan sebelumnya dibawa ke periode
+            berikutnya.
           </p>
           <div className="shared-grid">
             <section className="shared-card">
@@ -447,10 +459,15 @@ function SharedRoom({
                           entryType === "out" && paymentMethod === "credit"
                             ? f.get("dueDate")
                             : null,
+                        creditPayments:
+                          entryType === "out" && paymentMethod === "credit"
+                            ? creditPayments
+                            : [],
                         paidDate:
                           entryType === "out" &&
                           paymentMethod === "credit" &&
-                          creditPaid
+                          creditPaid &&
+                          !creditPayments.length
                             ? f.get("paidDate")
                             : null,
                       },
@@ -460,6 +477,7 @@ function SharedRoom({
                     setEntryType("contribution");
                     setPaymentMethod("direct");
                     setCreditPaid(false);
+                    setCreditPayments([]);
                     setEditingEntry(null);
                   }
                 }}
@@ -489,6 +507,7 @@ function SharedRoom({
                     max="1000000000000"
                     step="1"
                     defaultValue={editingEntry?.amount}
+                    onChange={(e) => setEntryAmount(Number(e.target.value))}
                     required
                   />
                 </label>
@@ -555,33 +574,14 @@ function SharedRoom({
                             defaultValue={editingEntry?.dueDate ?? ""}
                           />
                         </label>
-                        <label>
-                          Status kredit
-                          <select
-                            className="app-select"
-                            aria-label="Status kredit"
-                            value={creditPaid ? "paid" : "unpaid"}
-                            onChange={(e) =>
-                              setCreditPaid(e.target.value === "paid")
-                            }
-                          >
-                            <option value="unpaid">Belum lunas</option>
-                            <option value="paid">Lunas</option>
-                          </select>
-                        </label>
-                        {creditPaid && (
-                          <label>
-                            Tanggal pembayaran
-                            <input
-                              name="paidDate"
-                              type="date"
-                              required
-                              min="2000-01-01"
-                              max="2100-12-31"
-                              defaultValue={editingEntry?.paidDate ?? ""}
-                            />
-                          </label>
-                        )}
+                        <CreditPaymentFields
+                          amount={entryAmount}
+                          payments={creditPayments}
+                          onPayments={setCreditPayments}
+                          paid={creditPaid}
+                          onPaid={setCreditPaid}
+                          paidDate={editingEntry?.paidDate}
+                        />
                       </>
                     )}
                   </>
@@ -596,6 +596,7 @@ function SharedRoom({
                       setEntryType("contribution");
                       setPaymentMethod("direct");
                       setCreditPaid(false);
+                      setCreditPayments([]);
                     }}
                   >
                     Batal edit
@@ -734,7 +735,7 @@ function SharedRoom({
                       · {e.category} · {e.authorName} · {e.date}
                       {e.type === "out" &&
                         (e.paymentMethod === "credit"
-                          ? ` · Kredit · Jatuh tempo ${e.dueDate?.split("-").reverse().join("/")} · ${e.paidDate ? `Lunas ${e.paidDate.split("-").reverse().join("/")}` : "Belum lunas"}`
+                          ? ` · Kredit · Jatuh tempo ${e.dueDate?.split("-").reverse().join("/")} · ${creditStatus(e)}${e.paidDate ? ` ${e.paidDate.split("-").reverse().join("/")}` : ""}${e.creditPayments?.length ? ` - Sisa ${money(remainingCredit(e))}` : ""}`
                           : " · Pembayaran langsung")}
                     </small>
                   </span>
@@ -753,6 +754,8 @@ function SharedRoom({
                           setEntryType(e.type);
                           setPaymentMethod(e.paymentMethod ?? "direct");
                           setCreditPaid(!!e.paidDate);
+                          setCreditPayments(e.creditPayments ?? []);
+                          setEntryAmount(e.amount);
                           document
                             .getElementById("shared-entry-form")
                             ?.scrollIntoView({

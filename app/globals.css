@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+.credit-health ul {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
 :root {
   /* Shared palette from the login page. */
   --primary: #7254ad;
@@ -1244,6 +1252,59 @@ label .muted {
 }
 .credit-analytics table {
   min-width: 460px;
+}
+.planning-form {
+  margin-top: 20px;
+}
+.planning-form fieldset {
+  display: grid;
+  gap: 14px;
+  border: 0;
+  padding: 0;
+}
+.planning-form label,
+.payment-row label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  font-size: 12px;
+}
+.planning-form .checkbox-label {
+  display: flex;
+  align-items: center;
+}
+.checkbox-label input {
+  width: auto;
+}
+.planning-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.planning-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.planning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.payment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin: 14px 0;
+}
+.bill-overview summary {
+  margin-top: 16px;
+  cursor: pointer;
 }
 .chart-legend {
   display: flex;

@@ -70,8 +70,18 @@ export async function POST(request: Request) {
       await sql`INSERT INTO dompetku.personal_categories(user_id,name) VALUES(${id},${action.name}) ON CONFLICT DO NOTHING`;
     } else if (action.action === "entry") {
       const e = action.entry;
+      if (
+        e.recurringId &&
+        !(
+          await sql`SELECT id FROM dompetku.recurring_bills WHERE user_id=${id} AND id=${e.recurringId}`
+        ).length
+      )
+        return Response.json(
+          { error: "Template pengeluaran tetap tidak ditemukan." },
+          { status: 400 },
+        );
       const rows =
-        await sql`INSERT INTO dompetku.entries (id, user_id, type, amount, category, note, date, active, payment_method, due_date, paid_date) VALUES (${e.id}, ${id}, ${e.type}, ${e.amount}, ${e.category}, ${e.note}, ${e.date}, ${e.active}, ${e.paymentMethod ?? "direct"}, ${e.dueDate ?? null}, ${e.paidDate ?? null}) ON CONFLICT (id) DO UPDATE SET type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category, note = EXCLUDED.note, date = EXCLUDED.date, active = EXCLUDED.active, payment_method = EXCLUDED.payment_method, due_date = EXCLUDED.due_date, paid_date = EXCLUDED.paid_date WHERE dompetku.entries.user_id = ${id} RETURNING id`;
+        await sql`INSERT INTO dompetku.entries (id, user_id, type, amount, category, note, date, active, payment_method, due_date, paid_date, credit_payments, recurring_id) VALUES (${e.id}, ${id}, ${e.type}, ${e.amount}, ${e.category}, ${e.note}, ${e.date}, ${e.active}, ${e.paymentMethod ?? "direct"}, ${e.dueDate ?? null}, ${e.paidDate ?? null}, ${JSON.stringify(e.creditPayments ?? [])}::jsonb, ${e.recurringId ?? null}) ON CONFLICT (id) DO UPDATE SET type = EXCLUDED.type, amount = EXCLUDED.amount, category = EXCLUDED.category, note = EXCLUDED.note, date = EXCLUDED.date, active = EXCLUDED.active, payment_method = EXCLUDED.payment_method, due_date = EXCLUDED.due_date, paid_date = EXCLUDED.paid_date, credit_payments = EXCLUDED.credit_payments, recurring_id = EXCLUDED.recurring_id WHERE dompetku.entries.user_id = ${id} RETURNING id`;
       if (!rows.length)
         return Response.json(
           { error: "Data tidak ditemukan." },
@@ -88,6 +98,11 @@ export async function POST(request: Request) {
         );
     } else if (action.action === "income") {
       await sql`INSERT INTO dompetku.monthly_plans (user_id, month, income) VALUES (${id}, ${action.plan.month + "-01"}, ${action.plan.income}) ON CONFLICT (user_id, month) DO UPDATE SET income = EXCLUDED.income`;
+    } else if (action.action === "savingsGoal") {
+      await sql`INSERT INTO dompetku.finance_settings(user_id,savings_goal) VALUES(${id},${JSON.stringify(action.goal)}::jsonb) ON CONFLICT(user_id) DO UPDATE SET savings_goal=EXCLUDED.savings_goal`;
+    } else if (action.action === "recurringBill") {
+      const b = action.bill;
+      await sql`INSERT INTO dompetku.recurring_bills(user_id,id,name,amount,category,day,start_month,active) VALUES(${id},${b.id},${b.name},${b.amount},${b.category},${b.day},${b.startMonth + "-01"},${b.active}) ON CONFLICT(user_id,id) DO UPDATE SET name=EXCLUDED.name,amount=EXCLUDED.amount,category=EXCLUDED.category,day=EXCLUDED.day,start_month=EXCLUDED.start_month,active=EXCLUDED.active`;
     } else if (action.action === "delete") {
       if (action.kind === "entry")
         await sql`DELETE FROM dompetku.entries WHERE id = ${action.id} AND user_id = ${id}`;
@@ -99,14 +114,18 @@ export async function POST(request: Request) {
         sql`DELETE FROM dompetku.budgets WHERE user_id = ${id}`,
         sql`DELETE FROM dompetku.monthly_plans WHERE user_id = ${id}`,
         sql`DELETE FROM dompetku.personal_categories WHERE user_id = ${id}`,
+        sql`DELETE FROM dompetku.finance_settings WHERE user_id = ${id}`,
+        sql`DELETE FROM dompetku.recurring_bills WHERE user_id = ${id}`,
       ];
       if (action.action === "import") {
         queries.push(
           sql`INSERT INTO dompetku.personal_categories(user_id,name) SELECT ${id},value FROM jsonb_array_elements_text(${JSON.stringify(action.backup.categories)}::jsonb) ON CONFLICT DO NOTHING`,
+          sql`INSERT INTO dompetku.finance_settings(user_id,savings_goal) VALUES(${id},${JSON.stringify(action.backup.savingsGoal ?? null)}::jsonb)`,
+          sql`INSERT INTO dompetku.recurring_bills(user_id,id,name,amount,category,day,start_month,active) SELECT ${id},id,name,amount,category,day,("startMonth" || '-01')::date,active FROM jsonb_to_recordset(${JSON.stringify(action.backup.recurringBills)}::jsonb) AS x(id uuid,name text,amount bigint,category text,day integer,"startMonth" text,active boolean)`,
         );
         // All validation happens before replacement; one transaction prevents partial restores.
         queries.push(
-          sql`INSERT INTO dompetku.entries (user_id, type, amount, category, note, date, active, payment_method, due_date, paid_date) SELECT ${id}, type, amount, category, note, date, active, COALESCE("paymentMethod", 'direct'), "dueDate", "paidDate" FROM jsonb_to_recordset(${JSON.stringify(action.backup.entries)}::jsonb) AS x(type text, amount bigint, category text, note text, date date, active boolean, "paymentMethod" text, "dueDate" date, "paidDate" date)`,
+          sql`INSERT INTO dompetku.entries (user_id, type, amount, category, note, date, active, payment_method, due_date, paid_date, credit_payments, recurring_id) SELECT ${id}, type, amount, category, note, date, active, COALESCE("paymentMethod", 'direct'), "dueDate", "paidDate", COALESCE("creditPayments", '[]'::jsonb), "recurringId" FROM jsonb_to_recordset(${JSON.stringify(action.backup.entries)}::jsonb) AS x(type text, amount bigint, category text, note text, date date, active boolean, "paymentMethod" text, "dueDate" date, "paidDate" date, "creditPayments" jsonb, "recurringId" uuid)`,
         );
         queries.push(
           sql`INSERT INTO dompetku.budgets (user_id, month, name, planned) SELECT ${id}, (month || '-01')::date, name, planned FROM jsonb_to_recordset(${JSON.stringify(action.backup.budgets)}::jsonb) AS x(month text, name text, planned bigint)`,
@@ -126,7 +145,10 @@ export async function POST(request: Request) {
       error.code === "23505"
     )
       return Response.json(
-        { error: "Kategori tersebut sudah memiliki anggaran pada bulan ini." },
+        {
+          error:
+            "Anggaran atau tagihan berulang tersebut sudah tercatat pada bulan ini.",
+        },
         { status: 409 },
       );
     return Response.json(

@@ -59,6 +59,11 @@ export const entryBaseSchema = z.object({
   paymentMethod: z.enum(["direct", "credit"]).optional(),
   dueDate: dateSchema.nullable().optional(),
   paidDate: dateSchema.nullable().optional(),
+  creditPayments: z
+    .array(z.object({ id: z.uuid(), date: dateSchema, amount }))
+    .max(1000)
+    .optional(),
+  recurringId: z.uuid().nullable().optional(),
 });
 export function validPayment(entry: {
   type: string;
@@ -66,17 +71,30 @@ export function validPayment(entry: {
   paymentMethod?: string;
   dueDate?: string | null;
   paidDate?: string | null;
+  amount?: number;
+  creditPayments?: { id: string; date: string; amount: number }[];
+  recurringId?: string | null;
 }) {
+  const payments = entry.creditPayments ?? [];
+  if (entry.recurringId && entry.type !== "fixed") return false;
+  if (
+    payments.length &&
+    (entry.paidDate ||
+      payments.some((p) => p.date < entry.date) ||
+      new Set(payments.map((p) => p.id)).size !== payments.length ||
+      payments.reduce((sum, p) => sum + p.amount, 0) > (entry.amount ?? 0))
+  )
+    return false;
   return entry.paymentMethod === "credit"
     ? (entry.type === "out" || entry.type === "fixed") &&
         !!entry.dueDate &&
         entry.dueDate >= entry.date &&
         (!entry.paidDate || entry.paidDate >= entry.date)
-    : !entry.dueDate && !entry.paidDate;
+    : !entry.dueDate && !entry.paidDate && !payments.length;
 }
 export const paymentValidation = {
   message:
-    "Kredit hanya untuk pengeluaran; jatuh tempo wajib diisi. Jatuh tempo dan tanggal pembayaran tidak boleh sebelum tanggal transaksi.",
+    "Periksa pembayaran: kredit wajib memiliki jatuh tempo, tanggal pembayaran tidak boleh sebelum transaksi, dan total pembayaran tidak boleh melebihi tagihan.",
   path: ["dueDate"],
 };
 export const entrySchema = entryBaseSchema.refine(
@@ -93,6 +111,31 @@ export const planSchema = z.object({
   month: monthSchema,
   income: amount.min(0),
 });
+export const savingsGoalSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    amount,
+    startMonth: monthSchema,
+    targetMonth: monthSchema,
+  })
+  .refine(
+    (g) => g.targetMonth >= g.startMonth,
+    "Bulan target tidak boleh sebelum bulan mulai",
+  );
+export const recurringBillSchema = z.object({
+  id: z.uuid(),
+  name: z.string().trim().min(1).max(80),
+  amount,
+  category: z.string().trim().min(1).max(80),
+  day: z.number().int().min(1).max(31),
+  startMonth: monthSchema,
+  active: z.boolean(),
+});
+export type SavingsGoal = z.infer<typeof savingsGoalSchema>;
+export type RecurringBill = z.infer<typeof recurringBillSchema>;
+export type CreditPayment = NonNullable<
+  z.infer<typeof entryBaseSchema>["creditPayments"]
+>[number];
 // Linked transfers are read-only projections of shared contributions, not personal writes.
 export type Entry = z.infer<typeof entrySchema> & { spaceId?: string };
 export type Budget = z.infer<typeof budgetSchema>;
@@ -102,6 +145,8 @@ export type FinanceData = {
   entries: Entry[];
   budgets: Budget[];
   plans: Plan[];
+  savingsGoal?: SavingsGoal | null;
+  recurringBills?: RecurringBill[];
 };
 export const emptyData: FinanceData = { entries: [], budgets: [], plans: [] };
 export const backupSchema = z
@@ -111,6 +156,8 @@ export const backupSchema = z
     entries: z.array(entrySchema).max(10000),
     budgets: z.array(budgetSchema).max(2000),
     plans: z.array(planSchema).max(1212),
+    savingsGoal: savingsGoalSchema.nullable().optional(),
+    recurringBills: z.array(recurringBillSchema).max(500).default([]),
   })
   .superRefine((data, ctx) => {
     for (const keys of [
@@ -119,6 +166,10 @@ export const backupSchema = z
       data.budgets.map((x) => `${x.month}:${normalize(x.name)}`),
       data.plans.map((x) => x.month),
       data.categories.map(normalize),
+      data.recurringBills.map((b) => b.id),
+      data.entries
+        .filter((e) => e.recurringId)
+        .map((e) => `${e.recurringId}:${e.date.slice(0, 7)}`),
     ]) {
       if (new Set(keys).size !== keys.length)
         ctx.addIssue({
@@ -126,12 +177,28 @@ export const backupSchema = z
           message: "Cadangan mengandung data duplikat",
         });
     }
+    if (
+      data.entries.some(
+        (e) =>
+          e.recurringId &&
+          !data.recurringBills.some((b) => b.id === e.recurringId),
+      )
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Template tagihan pada cadangan tidak ditemukan",
+      });
   });
 export const mutationSchema = z.discriminatedUnion("action", [
   categoryActionSchema,
   z.object({ action: z.literal("entry"), entry: entrySchema }),
   z.object({ action: z.literal("budget"), budget: budgetSchema }),
   z.object({ action: z.literal("income"), plan: planSchema }),
+  z.object({
+    action: z.literal("savingsGoal"),
+    goal: savingsGoalSchema.nullable(),
+  }),
+  z.object({ action: z.literal("recurringBill"), bill: recurringBillSchema }),
   z.object({
     action: z.literal("delete"),
     kind: z.enum(["entry", "budget"]),
@@ -142,29 +209,58 @@ export const mutationSchema = z.discriminatedUnion("action", [
 ]);
 export type Mutation = z.infer<typeof mutationSchema>;
 
-// A missing paidDate means the credit has not been settled.
-export function paymentDate(entry: {
+type Payable = {
   date: string;
+  amount: number;
   paymentMethod?: string;
   paidDate?: string | null;
-}) {
-  return entry.paymentMethod === "credit" ? entry.paidDate : entry.date;
+  creditPayments?: CreditPayment[];
+};
+export function paymentsOf(entry: Payable): { date: string; amount: number }[] {
+  return entry.paymentMethod !== "credit"
+    ? [{ date: entry.date, amount: entry.amount }]
+    : entry.creditPayments?.length
+      ? entry.creditPayments
+      : entry.paidDate
+        ? [{ date: entry.paidDate, amount: entry.amount }]
+        : [];
 }
+export function remainingCredit(entry: Payable, through = "2100-12-31") {
+  return Math.max(
+    0,
+    entry.amount -
+      paymentsOf(entry)
+        .filter((p) => p.date <= through)
+        .reduce((sum, p) => sum + p.amount, 0),
+  );
+}
+export function creditStatus(entry: Payable) {
+  const remaining = remainingCredit(entry);
+  return remaining === 0
+    ? "Lunas"
+    : remaining < entry.amount
+      ? "Dibayar sebagian"
+      : "Belum lunas";
+}
+
 export function inActivityMonth(
   entry: {
     date: string;
     paymentMethod?: string;
     paidDate?: string | null;
     active: boolean;
+    amount: number;
+    creditPayments?: CreditPayment[];
   },
   month: string,
 ) {
   return (
     entry.date.startsWith(month) ||
     !!entry.paidDate?.startsWith(month) ||
+    !!entry.creditPayments?.some((p) => p.date.startsWith(month)) ||
     (entry.active &&
       entry.paymentMethod === "credit" &&
-      !entry.paidDate &&
+      remainingCredit(entry, `${month}-31`) > 0 &&
       entry.date.slice(0, 7) <= month)
   );
 }
@@ -182,18 +278,27 @@ export function figures(data: FinanceData, month: string) {
   const expense = sum("out") + sum("fixed");
   const cashExpense = data.entries
     .filter(
-      (e) =>
-        e.active &&
-        !e.spaceId &&
-        (e.type === "out" || e.type === "fixed") &&
-        paymentDate(e)?.startsWith(month),
+      (e) => e.active && !e.spaceId && (e.type === "out" || e.type === "fixed"),
     )
-    .reduce((sum, e) => sum + e.amount, 0);
+    .reduce(
+      (sum, e) =>
+        sum +
+        paymentsOf(e)
+          .filter((p) => p.date.startsWith(month))
+          .reduce((paid, p) => paid + p.amount, 0),
+      0,
+    );
   const saved = sum("deposit") - sum("withdraw");
   const savings = data.entries.reduce(
     (s, e) =>
       s +
-      (e.type === "deposit" ? e.amount : e.type === "withdraw" ? -e.amount : 0),
+      (e.active
+        ? e.type === "deposit"
+          ? e.amount
+          : e.type === "withdraw"
+            ? -e.amount
+            : 0
+        : 0),
     0,
   );
   const transferred = entries
@@ -229,9 +334,10 @@ export function creditFigures(
     )
       continue;
     const borrowed = e.date.startsWith(month) ? e.amount : 0;
-    const paid = e.paidDate?.startsWith(month) ? e.amount : 0;
-    const outstanding =
-      !e.paidDate || e.paidDate.slice(0, 7) > month ? e.amount : 0;
+    const paid = paymentsOf(e)
+      .filter((p) => p.date.startsWith(month))
+      .reduce((sum, p) => sum + p.amount, 0);
+    const outstanding = remainingCredit(e, `${month}-31`);
     if (!borrowed && !paid && !outstanding) continue;
     const key = normalize(e.category);
     const c = categories.get(key) ?? {
@@ -284,5 +390,191 @@ export function realization(data: FinanceData, budget: Budget) {
     spent,
     remaining: budget.planned - spent,
     percent: Math.round((spent / budget.planned) * 100),
+  };
+}
+
+const monthNumber = (month: string) =>
+  Number(month.slice(0, 4)) * 12 + Number(month.slice(5, 7)) - 1;
+export function savingsProgress(data: FinanceData, month: string) {
+  const goal = data.savingsGoal;
+  if (!goal) return null;
+  const net = (entries: Entry[]) =>
+    entries
+      .filter((e) => e.active)
+      .reduce(
+        (sum, e) =>
+          sum +
+          (e.type === "deposit"
+            ? e.amount
+            : e.type === "withdraw"
+              ? -e.amount
+              : 0),
+        0,
+      );
+  const baseline = net(
+    data.entries.filter((e) => e.date.slice(0, 7) < goal.startMonth),
+  );
+  const actual = net(data.entries.filter((e) => e.date.slice(0, 7) <= month));
+  const months =
+    monthNumber(goal.targetMonth) - monthNumber(goal.startMonth) + 1;
+  const monthlyPlan = Math.ceil(Math.max(0, goal.amount - baseline) / months);
+  const elapsed = Math.max(
+    0,
+    Math.min(months, monthNumber(month) - monthNumber(goal.startMonth) + 1),
+  );
+  const planned = Math.min(goal.amount, baseline + monthlyPlan * elapsed);
+  const monthlyActual = net(
+    data.entries.filter((e) => e.date.startsWith(month)),
+  );
+  const remaining = Math.max(0, goal.amount - actual);
+  const nextMonths = Math.max(
+    0,
+    monthNumber(goal.targetMonth) -
+      Math.max(monthNumber(month), monthNumber(goal.startMonth) - 1),
+  );
+  return {
+    baseline,
+    actual,
+    monthlyPlan,
+    monthlyActual,
+    monthlyGap:
+      monthlyActual -
+      (month >= goal.startMonth && month <= goal.targetMonth ? monthlyPlan : 0),
+    planned,
+    gap: actual - planned,
+    remaining,
+    nextMonthly: nextMonths > 0 ? Math.ceil(remaining / nextMonths) : null,
+    percent: Math.max(
+      0,
+      Math.min(100, Math.round((actual / goal.amount) * 100)),
+    ),
+  };
+}
+export function recurringDate(bill: RecurringBill, month: string) {
+  const lastDay = new Date(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5)),
+    0,
+  ).getDate();
+  return `${month}-${String(Math.min(bill.day, lastDay)).padStart(2, "0")}`;
+}
+export function billOverview(data: FinanceData, month: string, asOf = today()) {
+  const cutoff = `${month}-31`;
+  const candidates = data.entries.filter(
+    (e) =>
+      e.active &&
+      !e.spaceId &&
+      e.paymentMethod === "credit" &&
+      e.date <= cutoff,
+  );
+  const credits = candidates
+    .map((entry) => ({ entry, remaining: remainingCredit(entry, cutoff) }))
+    .filter((b) => b.remaining > 0)
+    .sort((a, b) =>
+      (a.entry.dueDate ?? "").localeCompare(b.entry.dueDate ?? ""),
+    );
+  const pendingRecurring = (data.recurringBills ?? []).filter(
+    (b) =>
+      b.active &&
+      b.startMonth <= month &&
+      !data.entries.some(
+        (e) => e.recurringId === b.id && e.date.startsWith(month),
+      ),
+  );
+  const unpaid = credits
+    .filter((b) => b.entry.dueDate && b.entry.dueDate <= cutoff)
+    .reduce((sum, b) => sum + b.remaining, 0);
+  const recurring = pendingRecurring.reduce((sum, b) => sum + b.amount, 0);
+  const soon = new Date(`${asOf}T12:00:00Z`);
+  soon.setUTCDate(soon.getUTCDate() + 7);
+  const soonDate = soon.toISOString().slice(0, 10);
+  const reminders = candidates.filter(
+    (e) =>
+      e.date <= asOf &&
+      e.dueDate &&
+      e.dueDate <= soonDate &&
+      remainingCredit(e, asOf) > 0,
+  );
+  return {
+    credits,
+    pendingRecurring,
+    unpaid,
+    recurring,
+    afterBills: figures(data, month).balance - unpaid - recurring,
+    reminders,
+  };
+}
+
+export function creditHealth(data: FinanceData, month: string, asOf = today()) {
+  const income = figures(data, month).income;
+  const bills = billOverview(data, month, asOf);
+  const paid = creditFigures(data, month, income).paid;
+  // ponytail: full remaining balance is due; use scheduled installments when that data exists.
+  const burden = paid + bills.unpaid;
+  const limit = Math.floor(income * 0.3);
+  const lastDay = new Date(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5)),
+    0,
+  ).getDate();
+  const reference = [`${month}-${lastDay}`, asOf].sort()[0];
+  const overdue = data.entries
+    .filter(
+      (e) =>
+        e.active &&
+        !e.spaceId &&
+        e.paymentMethod === "credit" &&
+        e.date <= reference &&
+        e.dueDate &&
+        e.dueDate < reference,
+    )
+    .reduce((sum, e) => sum + remainingCredit(e, reference), 0);
+  const excess = Math.max(0, burden - limit);
+  const status =
+    income <= 0
+      ? "Belum dapat dinilai"
+      : excess > 0 || bills.afterBills < 0
+        ? "Beban tinggi"
+        : overdue > 0
+          ? "Perlu perhatian"
+          : "Dalam acuan";
+  const reasons: string[] = [];
+  if (income <= 0)
+    reasons.push(
+      "Catat pemasukan bulan ini agar rasio dan kemampuan pembayaran dapat dinilai.",
+    );
+  else if (excess > 0)
+    reasons.push(
+      `Beban pembayaran melewati acuan 30% sebesar ${money(excess)}. Kurangi komitmen kredit baru; kewajiban yang sudah ada tetap perlu diselesaikan.`,
+    );
+  else
+    reasons.push(
+      "Beban pembayaran tidak melebihi acuan 30% dari pemasukan tercatat.",
+    );
+  if (bills.afterBills < 0)
+    reasons.push(
+      `Perkiraan saldo setelah tagihan minus ${money(-bills.afterBills)}. Tinjau pengeluaran dan siapkan dana untuk kewajiban yang jatuh tempo.`,
+    );
+  if (overdue > 0)
+    reasons.push(
+      `Ada sisa kredit terlambat ${money(overdue)} per ${reference.split("-").reverse().join("/")}. Prioritaskan penyelesaiannya.`,
+    );
+  if (status === "Dalam acuan")
+    reasons.push(
+      "Tidak ada tunggakan dan perkiraan saldo setelah tagihan tidak minus. Pastikan kebutuhan yang belum dicatat tetap terdanai sebelum menambah kredit.",
+    );
+  return {
+    status,
+    income,
+    paid,
+    unpaid: bills.unpaid,
+    burden,
+    limit,
+    excess,
+    overdue,
+    afterBills: bills.afterBills,
+    reference,
+    percent: income > 0 ? (burden / income) * 100 : null,
+    reasons,
   };
 }

@@ -22,11 +22,13 @@ export function categoryOptions(data: {
   categories?: string[];
   entries: { category: string; spaceId?: string }[];
   budgets: { name: string }[];
+  recurringBills?: { category: string }[];
 }) {
   const names = [
     ...defaultCategories,
     ...(data.categories ?? []),
     ...data.budgets.map((b) => b.name),
+    ...(data.recurringBills ?? []).map((b) => b.category),
     ...data.entries.filter((e) => !e.spaceId).map((e) => e.category),
   ];
   return [

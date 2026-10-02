@@ -11,20 +11,31 @@ export function getSql() {
 
 export async function readFinance(userId: string): Promise<FinanceData> {
   const sql = getSql();
-  const [entries, budgets, plans, transfers, categories] =
-    await sql.transaction([
-      sql`SELECT id, type, amount::float8 AS amount, category, note, to_char(date, 'YYYY-MM-DD') AS date, active, payment_method AS "paymentMethod", to_char(due_date, 'YYYY-MM-DD') AS "dueDate", to_char(paid_date, 'YYYY-MM-DD') AS "paidDate" FROM dompetku.entries WHERE user_id = ${userId} ORDER BY date DESC, created_at DESC`,
-      sql`SELECT id, to_char(month, 'YYYY-MM') AS month, name, planned::float8 AS planned FROM dompetku.budgets WHERE user_id = ${userId} ORDER BY name`,
-      sql`SELECT to_char(month, 'YYYY-MM') AS month, income::float8 AS income FROM dompetku.monthly_plans WHERE user_id = ${userId}`,
-      sql`SELECT 'shared:' || e.id::text AS id, 'out' AS type, e.amount::float8 AS amount, 'Ruang Bersama' AS category, 'Transfer ke ' || s.name AS note, to_char(e.date,'YYYY-MM-DD') AS date, e.active, s.id AS "spaceId" FROM dompetku.shared_entries e JOIN dompetku.spaces s ON s.id=e.space_id WHERE e.user_id=${userId} AND e.type='contribution' ORDER BY e.date DESC, e.created_at DESC`,
-      sql`SELECT name FROM dompetku.personal_categories WHERE user_id=${userId} ORDER BY name`,
-    ]);
+  const [
+    entries,
+    budgets,
+    plans,
+    transfers,
+    categories,
+    settings,
+    recurringBills,
+  ] = await sql.transaction([
+    sql`SELECT id, type, amount::float8 AS amount, category, note, to_char(date, 'YYYY-MM-DD') AS date, active, payment_method AS "paymentMethod", to_char(due_date, 'YYYY-MM-DD') AS "dueDate", to_char(paid_date, 'YYYY-MM-DD') AS "paidDate", credit_payments AS "creditPayments", recurring_id AS "recurringId" FROM dompetku.entries WHERE user_id = ${userId} ORDER BY date DESC, created_at DESC`,
+    sql`SELECT id, to_char(month, 'YYYY-MM') AS month, name, planned::float8 AS planned FROM dompetku.budgets WHERE user_id = ${userId} ORDER BY name`,
+    sql`SELECT to_char(month, 'YYYY-MM') AS month, income::float8 AS income FROM dompetku.monthly_plans WHERE user_id = ${userId}`,
+    sql`SELECT 'shared:' || e.id::text AS id, 'out' AS type, e.amount::float8 AS amount, 'Ruang Bersama' AS category, 'Transfer ke ' || s.name AS note, to_char(e.date,'YYYY-MM-DD') AS date, e.active, s.id AS "spaceId" FROM dompetku.shared_entries e JOIN dompetku.spaces s ON s.id=e.space_id WHERE e.user_id=${userId} AND e.type='contribution' ORDER BY e.date DESC, e.created_at DESC`,
+    sql`SELECT name FROM dompetku.personal_categories WHERE user_id=${userId} ORDER BY name`,
+    sql`SELECT savings_goal AS goal FROM dompetku.finance_settings WHERE user_id=${userId}`,
+    sql`SELECT id,name,amount::float8 AS amount,category,day,to_char(start_month,'YYYY-MM') AS "startMonth",active FROM dompetku.recurring_bills WHERE user_id=${userId} ORDER BY name`,
+  ]);
   return {
     entries: [...entries, ...transfers].sort((a, b) =>
       String(b.date).localeCompare(String(a.date)),
     ),
     budgets,
     plans,
+    savingsGoal: settings[0]?.goal ?? null,
+    recurringBills,
     categories: categories.map((c) => c.name),
   } as FinanceData;
 }

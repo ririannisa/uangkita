@@ -6,10 +6,128 @@ import {
   entrySchema,
   figures,
   creditFigures,
+  creditHealth,
+  billOverview,
+  savingsProgress,
+  recurringDate,
+  remainingCredit,
+  creditStatus,
+  mutationSchema,
   inActivityMonth,
   realization,
   type FinanceData,
 } from "../lib/finance";
+
+test("credit health assesses monthly obligations, overdue dates, and cash without double counting", () => {
+  const credit = {
+    id: crypto.randomUUID(),
+    type: "out" as const,
+    amount: 3500000,
+    category: "Belanja",
+    note: "Kredit",
+    date: "2026-09-01",
+    active: true,
+    paymentMethod: "credit" as const,
+    dueDate: "2026-10-05",
+    creditPayments: [
+      { id: crypto.randomUUID(), date: "2026-10-02", amount: 1000000 },
+    ],
+  };
+  const finance: FinanceData = {
+    entries: [credit],
+    budgets: [],
+    plans: [{ month: "2026-10", income: 10000000 }],
+  };
+  const result = creditHealth(finance, "2026-10", "2026-10-02");
+  assert.equal(result.burden, 3500000);
+  assert.equal(result.percent, 35);
+  assert.equal(result.excess, 500000);
+  assert.equal(result.afterBills, 6500000);
+  assert.equal(result.status, "Beban tinggi");
+  assert.equal(result.overdue, 0);
+  assert.ok(result.reasons.some((r) => r.includes("500.000")));
+  const atLimit = { ...finance, entries: [{ ...credit, amount: 3000000 }] };
+  assert.equal(
+    creditHealth(atLimit, "2026-10", "2026-10-02").status,
+    "Dalam acuan",
+  );
+  assert.equal(
+    creditHealth(
+      { ...finance, entries: [{ ...credit, amount: 3000001 }] },
+      "2026-10",
+      "2026-10-02",
+    ).status,
+    "Beban tinggi",
+  );
+  const late = creditHealth(atLimit, "2026-10", "2026-10-06");
+  assert.equal(late.status, "Perlu perhatian");
+  assert.equal(late.overdue, 2000000);
+  const deficit = creditHealth(
+    {
+      ...atLimit,
+      entries: [
+        ...atLimit.entries,
+        {
+          ...credit,
+          id: crypto.randomUUID(),
+          paymentMethod: "direct",
+          dueDate: null,
+          creditPayments: [],
+          amount: 8000000,
+          date: "2026-10-01",
+        },
+      ],
+    },
+    "2026-10",
+    "2026-10-02",
+  );
+  assert.equal(deficit.status, "Beban tinggi");
+  assert.equal(deficit.percent, 30);
+  assert.equal(deficit.afterBills, -1000000);
+  const noIncome = creditHealth(
+    { ...finance, plans: [] },
+    "2026-10",
+    "2026-10-02",
+  );
+  assert.equal(noIncome.status, "Belum dapat dinilai");
+  assert.equal(noIncome.percent, null);
+  const nextMonthDue = {
+    ...finance,
+    entries: [{ ...credit, dueDate: "2026-11-05" }],
+  };
+  assert.equal(
+    creditHealth(nextMonthDue, "2026-10", "2026-10-02").burden,
+    1000000,
+  );
+  const paidLate = {
+    ...atLimit,
+    entries: [
+      {
+        ...credit,
+        amount: 3000000,
+        creditPayments: [
+          ...credit.creditPayments,
+          { id: crypto.randomUUID(), date: "2026-10-10", amount: 2000000 },
+        ],
+      },
+    ],
+  };
+  assert.equal(
+    creditHealth(paidLate, "2026-10", "2026-10-06").overdue,
+    2000000,
+  );
+  assert.equal(creditHealth(paidLate, "2026-10", "2026-10-10").overdue, 0);
+  assert.equal(creditHealth(paidLate, "2026-10", "2026-10-10").burden, 3000000);
+  const excluded = {
+    ...finance,
+    entries: [
+      { ...credit, active: false },
+      { ...credit, id: "shared:transfer", spaceId: "room" },
+    ],
+  };
+  assert.equal(creditHealth(excluded, "2026-10", "2026-10-02").burden, 0);
+  assert.equal(creditHealth(finance, "2026-09", "2026-10-02").overdue, 0);
+});
 
 const data: FinanceData = {
   plans: [
@@ -81,6 +199,206 @@ const data: FinanceData = {
     },
   ],
 };
+test("partial payments reduce cash only on their own dates and reject invalid totals", () => {
+  const credit = {
+    ...data.entries[0],
+    amount: 1000000,
+    paymentMethod: "credit" as const,
+    dueDate: "2026-11-01",
+    creditPayments: [
+      { id: crypto.randomUUID(), date: "2026-10-02", amount: 200000 },
+      { id: crypto.randomUUID(), date: "2026-11-01", amount: 300000 },
+    ],
+  };
+  const updated = {
+    entries: [credit],
+    budgets: data.budgets,
+    plans: data.plans,
+  };
+  assert.equal(entrySchema.safeParse(credit).success, true);
+  assert.equal(figures(updated, "2026-10").cashExpense, 200000);
+  assert.equal(figures(updated, "2026-10").balance, 800000);
+  assert.equal(figures(updated, "2026-11").cashExpense, 300000);
+  assert.equal(creditFigures(updated, "2026-10").outstanding, 800000);
+  assert.equal(creditFigures(updated, "2026-11").outstanding, 500000);
+  assert.equal(remainingCredit(credit), 500000);
+  assert.equal(creditStatus(credit), "Dibayar sebagian");
+  assert.equal(inActivityMonth(credit, "2026-12"), true);
+  const full = {
+    ...credit,
+    creditPayments: [
+      ...credit.creditPayments,
+      { id: crypto.randomUUID(), date: "2026-12-01", amount: 500000 },
+    ],
+  };
+  assert.equal(creditStatus(full), "Lunas");
+  assert.equal(inActivityMonth(full, "2027-01"), false);
+  assert.equal(
+    entrySchema.safeParse({ ...full, amount: 999999 }).success,
+    false,
+  );
+  assert.equal(
+    entrySchema.safeParse({ ...credit, paidDate: "2026-10-02" }).success,
+    false,
+  );
+  assert.equal(
+    entrySchema.safeParse({
+      ...credit,
+      creditPayments: [{ ...credit.creditPayments[0], date: "2026-09-30" }],
+    }).success,
+    false,
+  );
+  assert.equal(
+    entrySchema.safeParse({
+      ...credit,
+      creditPayments: [credit.creditPayments[0], credit.creditPayments[0]],
+    }).success,
+    false,
+  );
+  assert.equal(
+    backupSchema.parse({ version: 1, ...updated }).entries[0].creditPayments
+      ?.length,
+    2,
+  );
+  assert.equal(
+    figures(
+      {
+        ...updated,
+        entries: [{ ...credit, creditPayments: [credit.creditPayments[0]] }],
+      },
+      "2026-11",
+    ).cashExpense,
+    0,
+  );
+});
+test("savings goals compare monthly net realization, cumulative plan, and revised forecast", () => {
+  const base = {
+    ...data.entries[0],
+    type: "deposit" as const,
+    category: "Tabungan",
+  };
+  const updated: FinanceData = {
+    budgets: [],
+    plans: [],
+    savingsGoal: {
+      name: "Dana darurat",
+      amount: 1200000,
+      startMonth: "2026-10",
+      targetMonth: "2026-12",
+    },
+    entries: [
+      { ...base, id: "prior", date: "2026-09-01", amount: 300000 },
+      { ...base, id: "now", amount: 200000 },
+      { ...base, id: "withdraw", type: "withdraw", amount: 50000 },
+      { ...base, id: "future", date: "2026-11-01", amount: 400000 },
+    ],
+  };
+  const goal = savingsProgress(updated, "2026-10")!;
+  assert.equal(goal.baseline, 300000);
+  assert.equal(goal.monthlyPlan, 300000);
+  assert.equal(goal.monthlyActual, 150000);
+  assert.equal(goal.monthlyGap, -150000);
+  assert.equal(goal.actual, 450000);
+  assert.equal(goal.planned, 600000);
+  assert.equal(goal.nextMonthly, 375000);
+  assert.equal(savingsProgress(updated, "2026-11")!.monthlyGap, 100000);
+  assert.equal(savingsProgress(updated, "2026-12")!.nextMonthly, null);
+  assert.equal(
+    mutationSchema.safeParse({
+      action: "savingsGoal",
+      goal: { ...updated.savingsGoal, targetMonth: "2026-09" },
+    }).success,
+    false,
+  );
+  assert.equal(
+    savingsProgress({ ...updated, savingsGoal: null }, "2026-10"),
+    null,
+  );
+});
+test("bill forecasts include unpaid due credit and unrecorded subscriptions without double counting", () => {
+  const bill = {
+    id: crypto.randomUUID(),
+    name: "Claude",
+    amount: 300000,
+    category: "Langganan",
+    day: 31,
+    startMonth: "2026-10",
+    active: true,
+  };
+  const credit = {
+    ...data.entries[0],
+    amount: 500000,
+    paymentMethod: "credit" as const,
+    dueDate: "2026-10-05",
+    creditPayments: [
+      { id: crypto.randomUUID(), date: "2026-10-02", amount: 100000 },
+    ],
+  };
+  const future = {
+    ...credit,
+    id: crypto.randomUUID(),
+    dueDate: "2026-11-05",
+    creditPayments: [],
+  };
+  const updated: FinanceData = {
+    entries: [credit, future],
+    budgets: [],
+    plans: data.plans,
+    recurringBills: [bill],
+  };
+  const overview = billOverview(updated, "2026-10", "2026-10-02");
+  assert.equal(overview.unpaid, 400000);
+  assert.equal(overview.recurring, 300000);
+  assert.equal(overview.afterBills, 200000);
+  assert.equal(overview.reminders.length, 1);
+  const scheduled = {
+    ...updated,
+    entries: [
+      {
+        ...credit,
+        creditPayments: [
+          { id: crypto.randomUUID(), date: "2026-10-05", amount: 500000 },
+        ],
+      },
+    ],
+  };
+  assert.equal(
+    billOverview(scheduled, "2026-10", "2026-10-02").reminders.length,
+    1,
+  );
+  assert.equal(
+    billOverview(scheduled, "2026-10", "2026-10-05").reminders.length,
+    0,
+  );
+  assert.equal(recurringDate(bill, "2027-02"), "2027-02-28");
+  assert.equal(recurringDate(bill, "2028-02"), "2028-02-29");
+  const recorded = {
+    ...credit,
+    id: crypto.randomUUID(),
+    type: "fixed" as const,
+    amount: 300000,
+    category: "Langganan",
+    recurringId: bill.id,
+    paymentMethod: "direct" as const,
+    dueDate: null,
+    creditPayments: [],
+  };
+  const next = billOverview(
+    { ...updated, entries: [...updated.entries, recorded] },
+    "2026-10",
+    "2026-10-02",
+  );
+  assert.equal(next.recurring, 0);
+  assert.equal(next.afterBills, overview.afterBills);
+  assert.equal(
+    backupSchema.safeParse({
+      version: 1,
+      ...updated,
+      entries: [recorded, { ...recorded, id: crypto.randomUUID() }],
+    }).success,
+    false,
+  );
+});
 test("credit analytics separates purchases, settlements and historical debt against all monthly income", () => {
   const credit = {
     ...data.entries[0],

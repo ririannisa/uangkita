@@ -86,6 +86,14 @@ test("credit due date is required, validated, saved, and cleared on direct payme
   await expect(row).toContainText("Kredit · Jatuh tempo 01/11/2026");
   await expect(row).toContainText("Belum lunas");
   await expectCreditAnalytics("250.000", "250.000", "2,6% dari pemasukan");
+  const health = page.locator(".credit-health");
+  await openAnalytics();
+  await expect(health).toContainText("Dalam acuan");
+  await expect(health).toContainText("Acuan 30%");
+  await expect(
+    health.getByRole("link", { name: "panduan edukasi OJK" }),
+  ).toHaveAttribute("href", "https://www.ojk.go.id/Files/box/BukuSakuOJK.pdf");
+  await nav.getByRole("button", { name: "Aktivitas", exact: true }).click();
   // Unpaid purchases remain available in the following month.
   await page.getByRole("button", { name: "Bulan berikutnya" }).click();
   await expect(row).toContainText("Belum lunas");
@@ -107,6 +115,10 @@ test("credit due date is required, validated, saved, and cleared on direct payme
   await dialog.getByRole("button", { name: "Simpan", exact: true }).click();
   await expect(row).toContainText("Lunas 05/11/2026");
   await expectCreditAnalytics("Rp 0", "Rp 0", "Belum ada pemasukan");
+  await openAnalytics();
+  await expect(health).toContainText("Belum dapat dinilai");
+  await expect(health).not.toContainText("NaN");
+  await nav.getByRole("button", { name: "Aktivitas", exact: true }).click();
   await expectBalance("250.000");
   await page.getByRole("button", { name: "Bulan sebelumnya" }).click();
   await expect(row).toContainText("Lunas 05/11/2026");

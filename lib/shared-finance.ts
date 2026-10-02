@@ -7,7 +7,7 @@ import {
   budgetSchema,
   type Budget,
   normalize,
-  paymentDate,
+  paymentsOf,
 } from "./finance";
 
 export const sharedEntrySchema = entryBaseSchema
@@ -40,18 +40,28 @@ export function sharedFigures(data: SharedFinance, month: string) {
   );
   const monthly = throughMonth.filter((e) => e.date.startsWith(month));
   const cashExpense = data.entries
-    .filter(
-      (e) => e.active && e.type === "out" && paymentDate(e)?.startsWith(month),
-    )
-    .reduce((sum, e) => sum + e.amount, 0);
+    .filter((e) => e.active && e.type === "out")
+    .reduce(
+      (sum, e) =>
+        sum +
+        paymentsOf(e)
+          .filter((p) => p.date.startsWith(month))
+          .reduce((paid, p) => paid + p.amount, 0),
+      0,
+    );
   return {
     balance: data.entries
-      .filter((e) => {
-        const date = paymentDate(e);
-        return e.active && !!date && date.slice(0, 7) <= month;
-      })
+      .filter((e) => e.active)
       .reduce(
-        (s, e) => s + (e.type === "contribution" ? e.amount : -e.amount),
+        (s, e) =>
+          s +
+          paymentsOf(e)
+            .filter((p) => p.date.slice(0, 7) <= month)
+            .reduce(
+              (paid, p) =>
+                paid + (e.type === "contribution" ? p.amount : -p.amount),
+              0,
+            ),
         0,
       ),
     contributions: monthly
