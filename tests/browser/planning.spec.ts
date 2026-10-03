@@ -1,5 +1,58 @@
 import { test, expect } from "@playwright/test";
 
+test("budget includes savings allocation without deducting deposits twice", async ({
+  page,
+}, info) => {
+  await page.goto("/demo");
+  const nav = page.locator(
+    info.project.name === "mobile" ? ".bottom-nav" : ".desktop-sidebar",
+  );
+  await nav.getByRole("button", { name: "Anggaran", exact: true }).click();
+  const summary = page.locator(".budget-summary");
+  const value = (label: string) =>
+    summary
+      .locator("div")
+      .filter({ has: page.getByText(label, { exact: true }) })
+      .locator("strong");
+  await expect(value("Total rencana")).toHaveText("Rp 3.100.000");
+  await expect(value("Sudah terealisasi")).toHaveText("Rp 3.815.000");
+  await expect(value("Sisa setelah rencana")).toHaveText("Rp 6.650.000");
+  await expect(value("Sisa uang saat ini")).toHaveText("Rp 4.435.000");
+
+  const goal = page.locator(".savings-goal");
+  await goal.getByRole("button", { name: "Buat target tabungan" }).click();
+  const month = await goal.getByLabel("Bulan mulai").inputValue();
+  await goal.getByLabel("Nama target").fill("Dana darurat");
+  await goal.getByLabel("Nominal target (Rp)").fill("3000000");
+  await goal.getByRole("button", { name: "Simpan target" }).click();
+  await expect(value("Total rencana")).toHaveText("Rp 6.100.000");
+  await expect(value("Sisa setelah rencana")).toHaveText("Rp 3.650.000");
+  await expect(value("Sisa uang saat ini")).toHaveText("Rp 4.435.000");
+  await expect(value("Sisa alokasi")).toHaveText("Rp 2.285.000");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+
+  await goal.getByRole("button", { name: "Ubah target tabungan" }).click();
+  await goal.getByLabel("Nominal target (Rp)").fill("20000000");
+  await goal.getByRole("button", { name: "Simpan target" }).click();
+  await expect(value("Sisa setelah rencana")).toHaveText("-Rp 13.350.000");
+  await expect(value("Sisa setelah rencana")).toHaveClass("negative");
+
+  await page.getByRole("button", { name: "Bulan berikutnya" }).click();
+  await expect(value("Total rencana")).toHaveText("Rp 0");
+  await expect(value("Sisa uang saat ini")).toHaveText("Rp 0");
+  await page.getByRole("button", { name: "Bulan sebelumnya" }).click();
+  await goal.getByRole("button", { name: "Ubah target tabungan" }).click();
+  await expect(goal.getByLabel("Bulan mulai")).toHaveValue(month);
+  page.once("dialog", (dialog) => dialog.accept());
+  await goal.getByRole("button", { name: "Hapus target", exact: true }).click();
+  await expect(value("Total rencana")).toHaveText("Rp 3.100.000");
+  await expect(value("Sisa uang saat ini")).toHaveText("Rp 4.435.000");
+});
+
 test("recurring fixed expense, partial payments, and savings plan", async ({
   page,
 }, info) => {

@@ -63,6 +63,7 @@ import {
   mutationSchema,
   normalize,
   realization,
+  savingsProgress,
   today,
   type Budget,
   type Entry,
@@ -170,8 +171,18 @@ export default function Dashboard({
     [data, month],
   );
   const alerts = budgets.filter((b) => b.realization.percent >= 80);
-  const totalPlanned = budgets.reduce((sum, b) => sum + b.planned, 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + b.realization.spent, 0);
+  const savings = useMemo(() => savingsProgress(data, month), [data, month]);
+  const savingsAllocation =
+    data.savingsGoal &&
+    month >= data.savingsGoal.startMonth &&
+    month <= data.savingsGoal.targetMonth
+      ? (savings?.monthlyPlan ?? 0)
+      : 0;
+  const totalPlanned =
+    budgets.reduce((sum, b) => sum + b.planned, 0) + savingsAllocation;
+  const totalSpent =
+    budgets.reduce((sum, b) => sum + b.realization.spent, 0) + f.saved;
+  const unallocated = f.income - totalPlanned - f.transferred;
   const move = (next: Tab) => {
     setTab(next);
     setQuery("");
@@ -1146,7 +1157,7 @@ export default function Dashboard({
                   <div>
                     <h2>Rencana & realisasi</h2>
                     <p className="muted small">
-                      Kenali pengeluaranmu, kategori demi kategori.
+                      Rencanakan pengeluaran dan tabungan dalam satu anggaran.
                     </p>
                   </div>
                   <button
@@ -1156,7 +1167,10 @@ export default function Dashboard({
                     <Plus size={17} /> Anggaran
                   </button>
                 </div>
-                <div className="budget-overview">
+                <div
+                  className="budget-overview budget-summary"
+                  aria-label="Ringkasan anggaran"
+                >
                   <div>
                     <span>Total rencana</span>
                     <strong>{money(totalPlanned)}</strong>
@@ -1179,12 +1193,41 @@ export default function Dashboard({
                       {money(Math.abs(totalPlanned - totalSpent))}
                     </strong>
                   </div>
+                  <div>
+                    <span>Pemasukan bulan ini</span>
+                    <strong>{money(f.income)}</strong>
+                  </div>
+                  <div>
+                    <span>Sisa setelah rencana</span>
+                    <strong
+                      className={unallocated < 0 ? "negative" : "positive"}
+                    >
+                      {money(unallocated)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Sisa uang saat ini</span>
+                    <strong className={f.balance < 0 ? "negative" : "positive"}>
+                      {money(f.balance)}
+                    </strong>
+                  </div>
                 </div>
                 <p className="small muted">
                   Realisasi mencakup transaksi keluar dan pengeluaran tetap
-                  aktif pada kategori yang sama. Buka rincian untuk melihat
-                  transaksi terbesar.
+                  aktif pada kategori yang sama, serta setoran tabungan
+                  dikurangi penarikan. Total rencana termasuk target tabungan
+                  bulanan selama periode target. Sisa setelah rencana adalah
+                  pemasukan dikurangi total rencana dan transfer ke ruang
+                  bersama. Sisa uang saat ini mengikuti pembayaran, tabungan,
+                  dan transfer yang sudah dicatat, termasuk pengeluaran di luar
+                  kategori anggaran.
                 </p>
+                <SavingsGoalPanel
+                  data={data}
+                  month={month}
+                  busy={busy}
+                  onSave={(goal) => mutate({ action: "savingsGoal", goal })}
+                />
                 <div className="budget-grid">
                   {budgets.map((b) => budgetCard(b))}
                 </div>
