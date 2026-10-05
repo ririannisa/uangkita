@@ -1,0 +1,14 @@
+{
+  "cli": { "version": ">= 16.0.0" },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "env": { "EXPO_PUBLIC_API_URL": "https://uangkita.aksenraras.my.id" },
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "env": { "EXPO_PUBLIC_API_URL": "https://uangkita.aksenraras.my.id" },
+      "android": { "buildType": "app-bundle" }
+    }
+  }
+}
