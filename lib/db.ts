@@ -1,6 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
-import type { FinanceData } from "./finance";
+import { withFinanceDetails, type FinanceData } from "./finance";
 
 export function getSql() {
   const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -28,7 +28,7 @@ export async function readFinance(userId: string): Promise<FinanceData> {
     sql`SELECT savings_goal AS goal FROM dompetku.finance_settings WHERE user_id=${userId}`,
     sql`SELECT id,name,amount::float8 AS amount,category,day,to_char(start_month,'YYYY-MM') AS "startMonth",active FROM dompetku.recurring_bills WHERE user_id=${userId} ORDER BY name`,
   ]);
-  return {
+  return withFinanceDetails({
     entries: [...entries, ...transfers].sort((a, b) =>
       String(b.date).localeCompare(String(a.date)),
     ),
@@ -37,5 +37,5 @@ export async function readFinance(userId: string): Promise<FinanceData> {
     savingsGoal: settings[0]?.goal ?? null,
     recurringBills,
     categories: categories.map((c) => c.name),
-  } as FinanceData;
+  } as FinanceData);
 }

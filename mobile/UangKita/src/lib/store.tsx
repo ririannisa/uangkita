@@ -8,15 +8,14 @@ import {
   type ReactNode,
 } from "react";
 import { AppState, Platform } from "react-native";
-import { File, Paths } from "expo-file-system";
 import * as WebBrowser from "expo-web-browser";
 import * as Crypto from "expo-crypto";
 import Constants from "expo-constants";
 import { mobileAuthVerifier } from "../../../../lib/mobile-auth";
 import { api, ApiError, clearSession, apiURL } from "./api";
-import { applyMutation, demoData } from "./core";
+import { applyMutation } from "./core";
+import type { Theme } from "./theme";
 import {
-  backupSchema,
   emptyData,
   mutationSchema,
   today,
@@ -33,36 +32,27 @@ type Store = {
   month: string;
   setMonth: (v: string) => void;
   ready: boolean;
-  demo: boolean;
   busy: boolean;
   error: string;
   setError: (v: string) => void;
   hidden: boolean;
   setHidden: (v: boolean) => void;
-  theme: "auto" | "light" | "dark";
-  setTheme: (v: "auto" | "light" | "dark") => void;
+  theme: Theme;
+  setTheme: (v: Theme) => void;
   reload: () => Promise<void>;
   save: (a: Mutation) => Promise<boolean>;
   login: (email: string, password: string, name?: string) => Promise<boolean>;
   loginGoogle: () => Promise<boolean>;
-  startDemo: () => void;
   logout: () => Promise<void>;
   spaces: SpaceOverview;
   loadSpaces: () => Promise<void>;
 };
 const Context = createContext<Store | null>(null);
-const demoFile = () => new File(Paths.document, "uangkita-demo.json");
-function persistDemo(data: FinanceData) {
-  if (Platform.OS === "web")
-    sessionStorage.setItem("uangkita-demo", JSON.stringify(data));
-  else demoFile().write(JSON.stringify(data));
-}
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [data, setDataState] = useState<FinanceData>(emptyData);
   const [month, setMonth] = useState(today().slice(0, 7));
-  const [ready, setReady] = useState(!apiURL || Platform.OS === "web");
-  const [demo, setDemo] = useState(false);
+  const [ready, setReady] = useState(!apiURL);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [hidden, setHidden] = useState(false);
@@ -81,17 +71,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
 
   const loadSpaces = useCallback(async () => {
-    if (!demo) {
-      const version = generation.current;
-      const overview = await api<SpaceOverview>("/api/spaces");
-      if (version === generation.current) setSpaces(overview);
-    }
-  }, [demo]);
+    const version = generation.current;
+    const overview = await api<SpaceOverview>("/api/spaces");
+    if (version === generation.current) setSpaces(overview);
+  }, []);
   useEffect(() => {
-    if (user && !demo) loadSpaces().catch((e) => setError(e.message));
-  }, [user, demo, loadSpaces]);
+    if (user) loadSpaces().catch((e) => setError(e.message));
+  }, [user, loadSpaces]);
   async function reload() {
-    if (demo) return;
     const version = generation.current;
     try {
       const updated = await api<FinanceData>("/api/finance");
@@ -112,7 +99,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }
   useEffect(() => {
     let alive = true;
-    if (!apiURL || Platform.OS === "web") {
+    if (!apiURL) {
       return;
     }
     api<{ user?: User } | null>("/api/auth/get-session?disableCookieCache=true")
@@ -136,7 +123,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active" && user && !demo && !pending.current)
+      if (state === "active" && user && !pending.current)
         reload().catch((e) => setError(e.message));
     });
     return () => subscription.remove();
@@ -151,16 +138,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const parsed = mutationSchema.safeParse(input);
       if (!parsed.success) throw new Error(parsed.error.issues[0].message);
       const next = applyMutation(currentData.current, parsed.data);
-      if (demo) persistDemo(next);
-      else await api("/api/finance", parsed.data);
-      currentData.current = next;
-      setData(next);
-      if (!demo)
-        await reload().catch(() =>
-          setError(
-            "Perubahan sudah tersimpan. Tarik layar ke bawah untuk memuat data terbaru.",
-          ),
-        );
+      await api("/api/finance", parsed.data);
+      setData({
+        ...next,
+        budgets: next.budgets.map((budget) => ({ ...budget, dailyFoodAllowance: null })),
+      });
+      await reload().catch(() =>
+        setError(
+          "Perubahan sudah tersimpan. Tarik layar ke bawah untuk memuat data terbaru.",
+        ),
+      );
       return true;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
@@ -186,7 +173,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       );
     const finance = await api<FinanceData>("/api/finance");
     generation.current++;
-    setDemo(false);
     setUser(session.user);
     setData(finance);
   }
@@ -199,7 +185,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     try {
       if (Platform.OS === "web")
         throw new Error(
-          "Login akun tersedia di aplikasi Android/iOS. Pratinjau browser bisa memakai mode demo.",
+          "Login Google tersedia di aplikasi Android/iOS.",
         );
       if (Constants.appOwnership === "expo")
         throw new Error(
@@ -270,43 +256,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setBusy(false);
     }
   }
-  function startDemo() {
-    let next = demoData(today().slice(0, 7));
-    try {
-      const saved =
-        Platform.OS === "web"
-          ? sessionStorage.getItem("uangkita-demo")
-          : demoFile().exists
-            ? demoFile().textSync()
-            : null;
-      if (saved)
-        next = backupSchema.parse({ ...JSON.parse(saved), version: 1 });
-    } catch {
-      /* A damaged demo file must never block the app. */
-    }
-    generation.current++;
-    setData(next);
-    setMonth(today().slice(0, 7));
-    setDemo(true);
-    setError("");
-    setUser({
-      id: "demo",
-      name: "Annisa",
-      email: "annisa@example.com",
-      emailVerified: true,
-    });
-  }
   async function logout() {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
     try {
-      if (!demo) await api("/api/auth/sign-out", {}).catch(() => undefined);
+      await api("/api/auth/sign-out", {}).catch(() => undefined);
       await clearSession();
       generation.current++;
       setUser(null);
       setData(emptyData);
-      setDemo(false);
       setSpaces({ spaces: [], invitations: [], emailVerified: false });
       setError("");
     } finally {
@@ -322,7 +281,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         month,
         setMonth,
         ready,
-        demo,
         busy,
         error,
         setError,
@@ -334,7 +292,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         save,
         login,
         loginGoogle,
-        startDemo,
         logout,
         spaces,
         loadSpaces,

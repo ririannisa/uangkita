@@ -1,23 +1,192 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { sampleData } from "./fixtures";
+import { themeColors } from "../src/lib/theme";
+import { analyticsData, filterActivity } from "../src/lib/analytics";
 import {
   mobileAuthRedirect,
   mobileAuthVerifier,
 } from "../../../lib/mobile-auth";
 import {
   applyMutation,
-  demoData,
   sessionCookie,
   sessionCookieName,
   shiftMonth,
 } from "../src/lib/core";
 import {
   backupSchema,
+  dailyFoodAllowance,
   figures,
   mutationSchema,
   realization,
   savingsProgress,
 } from "../src/lib/finance";
+
+test("neon remains dark on either system theme and keeps text readable", () => {
+  const neon = themeColors("neon", "light");
+  assert.equal(neon.dark, true);
+  assert.deepEqual(themeColors("neon", "dark"), neon);
+  assert.equal(themeColors("auto", "dark").dark, true);
+  assert.equal(themeColors("auto", "light").dark, false);
+  assert.equal(themeColors("light", "dark").dark, false);
+  assert.equal(themeColors("dark", "light").dark, true);
+  assert.notEqual(neon.primary, themeColors("dark", "dark").primary);
+  function luminance(hex: string) {
+    const channels = hex
+      .slice(1)
+      .match(/../g)!
+      .map((channel) => {
+        const value = parseInt(channel, 16) / 255;
+        return value <= 0.04045
+          ? value / 12.92
+          : ((value + 0.055) / 1.055) ** 2.4;
+      });
+    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  }
+  for (const background of [
+    neon.bg,
+    neon.surface,
+    neon.mint,
+    neon.lilac,
+    neon.cream,
+    neon.peach,
+  ]) {
+    for (const text of [
+      neon.ink,
+      neon.muted,
+      neon.primary,
+      neon.green,
+      neon.red,
+    ]) {
+      assert.ok(
+        (luminance(text) + 0.05) / (luminance(background) + 0.05) >= 4.5,
+      );
+    }
+  }
+});
+
+test("analytics group real expenses, preserve totals and distinguish credit purchases from payments", () => {
+  const data = sampleData("2026-10");
+  const extra = {
+    ...data.entries[0],
+    id: "extra",
+    amount: 20000,
+    category: " makan & MINUM ",
+  };
+  const credit = {
+    ...data.entries[0],
+    id: "credit",
+    amount: 500000,
+    category: "Belanja",
+    paymentMethod: "credit" as const,
+    dueDate: "2026-11-10",
+    creditPayments: [{ id: "payment", date: "2026-11-01", amount: 100000 }],
+  };
+  const reportData = {
+    ...data,
+    entries: [
+      ...data.entries,
+      extra,
+      credit,
+      { ...extra, id: "inactive", active: false },
+      { ...extra, id: "shared", spaceId: "room" },
+      ...Array.from({ length: 7 }, (_, index) => ({
+        ...extra,
+        id: `sector-${index}`,
+        amount: 1000,
+        category: `Sector ${index}`,
+      })),
+    ],
+  };
+  const report = analyticsData(reportData, "2026-10");
+  assert.equal(
+    report.categories.find((row) => row.name === "Makan & minum")?.amount,
+    1700000,
+  );
+  assert.equal(report.total, figures(reportData, "2026-10").expense);
+  assert.equal(
+    report.slices.reduce((sum, slice) => sum + slice.amount, 0),
+    report.total,
+  );
+  assert.equal(report.slices.length, 6);
+  assert.equal(
+    report.periods.at(-1)?.expense,
+    figures(reportData, "2026-10").cashExpense,
+  );
+  assert.equal(
+    analyticsData(reportData, "2026-11").periods.at(-1)?.expense,
+    100000,
+  );
+  assert.equal(
+    report.budgets.find((budget) => budget.name === "Belanja")?.spent,
+    950000,
+  );
+  assert.deepEqual(
+    filterActivity(
+      reportData.entries,
+      "2026-11",
+      "credit",
+      " belanja ",
+      "",
+    ).map((entry) => entry.id),
+    ["credit"],
+  );
+  assert.equal(
+    filterActivity(
+      reportData.entries,
+      "2026-10",
+      "out",
+      "Makan & minum",
+      " BELANJA ",
+    ).length,
+    4,
+  );
+  const empty = analyticsData(
+    { entries: [], budgets: [], plans: [] },
+    "2026-10",
+  );
+  assert.equal(empty.total, 0);
+  assert.deepEqual(empty.slices, []);
+  assert.ok(
+    empty.periods.every(
+      (period) => period.income === 0 && period.expense === 0,
+    ),
+  );
+});
+
+test("daily food allowance uses the smaller remainder, includes today and never goes negative", () => {
+  const budget = { id: "food", name: "Makan & minum", month: "2026-10", planned: 780000 };
+  const data = {
+    entries: [],
+    budgets: [budget],
+    plans: [{ month: budget.month, income: 1000000 }],
+  };
+  assert.deepEqual(dailyFoodAllowance(data, budget, "2026-10-06"), {
+    days: 26, daily: 30000, cashLimited: false, includesToday: true,
+  });
+  const tight = { ...data, plans: [{ month: budget.month, income: 520000 }] };
+  assert.deepEqual(dailyFoodAllowance(tight, budget, "2026-10-06"), {
+    days: 26, daily: 20000, cashLimited: true, includesToday: true,
+  });
+  const spent = { ...data, entries: [{
+    id: "meal", type: "out" as const, amount: 260000,
+    category: budget.name, note: "Makan", date: "2026-10-05", active: true,
+  }] };
+  assert.equal(dailyFoodAllowance(spent, budget, "2026-10-06")!.daily, 20000);
+  assert.equal(dailyFoodAllowance(data, budget, "2026-10-31")!.daily, 780000);
+  assert.equal(dailyFoodAllowance(data, budget, "2026-09-30")!.days, 31);
+  assert.equal(dailyFoodAllowance(data, budget, "2026-11-01"), null);
+  assert.equal(dailyFoodAllowance(data, { ...budget, name: "Transportasi" }, "2026-10-06"), null);
+  assert.equal(dailyFoodAllowance(data, { ...budget, name: " Makan DAN minum " }, "2026-10-06")!.daily, 30000);
+  for (const income of [0, -100000]) {
+    assert.equal(dailyFoodAllowance({ ...data, plans: [{ month: budget.month, income }] }, budget, "2026-10-06")!.daily, 0);
+  }
+  assert.equal(dailyFoodAllowance(spent, { ...budget, planned: 100000 }, "2026-10-06")!.daily, 0);
+  assert.equal(dailyFoodAllowance(data, { ...budget, planned: 780001 }, "2026-10-06")!.daily, 30000);
+  for (const [month, days] of [["2028-02", 29], ["2026-02", 28]] as const) {
+    assert.equal(dailyFoodAllowance(data, { ...budget, month }, `${month}-01`)!.days, days);
+  }
+});
 
 test("native session stores only the Neon token, handles combined expiry headers and revocation", () => {
   const token = `${sessionCookieName}=signed-token`;
@@ -85,7 +254,7 @@ test("Google callback is fixed to the app, bound to its attempt, and never conta
 });
 
 test("mobile uses the exact web figures, savings plan and validated mutations", () => {
-  const data = demoData("2026-10");
+  const data = sampleData("2026-10");
   assert.equal(backupSchema.safeParse({ ...data, version: 1 }).success, true);
   assert.equal(figures(data, "2026-10").balance, 4435000);
   const planned = applyMutation(

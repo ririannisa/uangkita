@@ -1,5 +1,25 @@
 import { useState } from "react";
-import { Platform } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
+import {
+  ArrowDownLeft,
+  Wallet,
+  ChartNoAxesCombined,
+  UsersRound,
+  Monitor,
+  Sun,
+  Moon,
+  Sparkles,
+  Eye,
+  EyeOff,
+  Tags,
+  Download,
+  Upload,
+  LogOut,
+  ShieldCheck,
+  Trash2,
+  Palette,
+  Plus,
+} from "lucide-react-native";
 import { router } from "expo-router";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -7,11 +27,13 @@ import * as DocumentPicker from "expo-document-picker";
 import {
   Button,
   Card,
+  MenuRow,
   Field,
   Page,
   Row,
   Txt,
   confirm,
+  useColors,
 } from "@/components/finance-ui";
 import { useFinance } from "@/lib/store";
 import { api } from "@/lib/api";
@@ -19,6 +41,7 @@ import { backupSchema, categoryOptions, today } from "@/lib/finance";
 
 export default function AccountScreen() {
   const store = useFinance();
+  const c = useColors();
   const [category, setCategory] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -120,60 +143,135 @@ export default function AccountScreen() {
   }
   return (
     <Page period={false}>
-      <Card tone="mint" title={store.user?.name}>
+      <Card tone="lilac">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <View
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: c.lilac,
+              borderWidth: 1,
+              borderColor: c.primary,
+            }}
+          >
+            <Text style={{ fontSize: 25, fontWeight: "700", color: c.primary }}>
+              {store.user?.name.slice(0, 1).toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Txt large>{store.user?.name}</Txt>
+            <Txt muted>Ruang pribadi untuk rencana besarmu.</Txt>
+          </View>
+        </View>
         <Txt>{store.user?.email}</Txt>
-        <Txt muted>
-          {store.demo
-            ? "Akun contoh · data lokal"
-            : "Akun pribadi · terhubung ke web"}
-        </Txt>
+        <Txt muted>Akun pribadi · terhubung ke web</Txt>
       </Card>
-      <Card title="Pengaturan keuangan">
-        <Button
-          secondary
+      <Card title="Pengaturan keuangan" icon={Wallet}>
+        <MenuRow
+          icon={ArrowDownLeft}
+          description="Pendapatan bulanan sebagai dasar rencanamu"
           title="Atur pemasukan rutin"
           onPress={() => router.push("/form?kind=income")}
         />
-        <Button
-          secondary
+        <MenuRow
+          icon={Wallet}
+          description="Pantau pengeluaran tetap dan jatuh tempo"
           title="Kelola tagihan rutin"
           onPress={() => router.push("/bills")}
         />
-        <Button
-          secondary
+        <MenuRow
+          icon={ChartNoAxesCombined}
+          description="Grafik, kategori terbesar, dan kesehatan kredit"
           title="Analitik keuangan"
           onPress={() => router.push("/analytics")}
         />
-        <Button
-          secondary
+        <MenuRow
+          icon={UsersRound}
+          description="Satu dompet untuk pasangan atau keluarga"
           title="Ruang bersama"
           onPress={() => router.push("/spaces")}
         />
       </Card>
-      <Card title="Tampilan">
+      <Card title="Tampilan" icon={Palette}>
+        <Txt muted>Pilih suasana yang paling nyaman untukmu.</Txt>
         <Row>
-          {[
-            ["auto", "Ikuti perangkat"],
-            ["light", "Terang"],
-            ["dark", "Gelap"],
-          ].map(([value, label]) => (
-            <Button
-              compact
+          {(
+            [
+              [
+                "auto",
+                "Ikuti perangkat",
+                Monitor,
+                ["#7254ad", "#def3ec", "#eee5f8"],
+              ],
+              ["light", "Terang", Sun, ["#ffffff", "#7254ad", "#def3ec"]],
+              ["dark", "Gelap", Moon, ["#171f25", "#bfa4ec", "#8dd6c1"]],
+              ["neon", "Neon", Sparkles, ["#7c3aed", "#a855f7", "#22d3ee"]],
+            ] as const
+          ).map(([value, label, Icon, swatches]) => (
+            <Pressable
               key={value}
-              title={label}
-              secondary={store.theme !== value}
-              onPress={() => store.setTheme(value as "auto" | "light" | "dark")}
-            />
+              accessibilityRole="button"
+              accessibilityLabel={label}
+              accessibilityState={{ selected: store.theme === value }}
+              onPress={() => store.setTheme(value)}
+              style={{
+                flexBasis: "46%",
+                flexGrow: 1,
+                minHeight: 102,
+                gap: 12,
+                padding: 14,
+                borderRadius: 16,
+                borderWidth: store.theme === value ? 2 : 1,
+                borderColor: store.theme === value ? c.primary : c.line,
+                backgroundColor: store.theme === value ? c.lilac : c.surface,
+              }}
+            >
+              <Icon size={21} color={c.primary} />
+              <Text style={{ color: c.ink, fontSize: 12, fontWeight: "700" }}>
+                {label}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 5 }}>
+                {swatches.map((color) => (
+                  <View
+                    key={color}
+                    style={{
+                      width: 18,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: color,
+                    }}
+                  />
+                ))}
+              </View>
+            </Pressable>
           ))}
         </Row>
-        <Button
-          secondary
+        <MenuRow
+          icon={store.hidden ? Eye : EyeOff}
+          description="Atur privasi angka di layar dan grafik"
           title={store.hidden ? "Tampilkan nominal" : "Sembunyikan nominal"}
           onPress={() => store.setHidden(!store.hidden)}
         />
       </Card>
-      <Card title="Kategori pribadi">
-        <Txt muted>{categoryOptions(store.data).join(" · ")}</Txt>
+      <Card title="Kategori pribadi" icon={Tags}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {(store.data.availableCategories ?? categoryOptions(store.data)).map((name) => (
+            <View
+              key={name}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 7,
+                borderRadius: 8,
+                backgroundColor: c.lilac,
+              }}
+            >
+              <Text style={{ color: c.primary, fontSize: 12 }}>{name}</Text>
+            </View>
+          ))}
+        </View>
         <Field
           label="Nama kategori baru"
           value={category}
@@ -182,6 +280,7 @@ export default function AccountScreen() {
         />
         <Button
           title="Tambah kategori"
+          icon={Plus}
           disabled={busy || !category.trim()}
           onPress={async () => {
             if (await store.save({ action: "category", name: category }))
@@ -189,8 +288,8 @@ export default function AccountScreen() {
           }}
         />
       </Card>
-      {!store.demo && !store.spaces.emailVerified && (
-        <Card title="Verifikasi email">
+      {!store.spaces.emailVerified && (
+        <Card title="Verifikasi email" icon={ShieldCheck}>
           <Txt muted>
             Verifikasi email agar dapat menerima undangan ruang bersama.
           </Txt>
@@ -204,45 +303,51 @@ export default function AccountScreen() {
             />
           )}
           <Button
+            icon={ShieldCheck}
             title={otpSent ? "Verifikasi kode" : "Kirim kode verifikasi"}
             disabled={busy || (otpSent && !otp)}
             onPress={verify}
           />
         </Card>
       )}
-      <Card title="Cadangan data">
+      <Card title="Cadangan data" icon={ShieldCheck}>
         <Txt muted>
           Simpan cadangan pribadi atau pulihkan dari file JSON web UangKita.
         </Txt>
-        <Button
-          secondary
+        <MenuRow
+          icon={Download}
+          description="Simpan salinan transaksi dan rencana pribadi"
           title="Ekspor cadangan"
           disabled={busy}
           onPress={exportBackup}
         />
-        <Button
-          secondary
+        <MenuRow
+          icon={Upload}
+          description="Pulihkan catatan dari cadangan UangKita"
           title="Impor cadangan"
           disabled={busy}
           onPress={importBackup}
         />
       </Card>
-      <Button
-        secondary
-        title={store.demo ? "Keluar dari mode demo" : "Keluar dari akun"}
-        disabled={busy}
-        onPress={() =>
-          confirm(
-            "Keluar?",
-            "Kamu dapat masuk kembali kapan saja.",
-            () => {
-              void store.logout();
-            },
-            false,
-          )
-        }
-      />
-      <Card title="Hapus data pribadi">
+      <Card>
+        <MenuRow
+          icon={LogOut}
+          description="Akunmu bisa dibuka kembali kapan saja"
+          title="Keluar dari akun"
+          disabled={busy}
+          onPress={() =>
+            confirm(
+              "Keluar?",
+              "Kamu dapat masuk kembali kapan saja.",
+              () => {
+                void store.logout();
+              },
+              false,
+            )
+          }
+        />
+      </Card>
+      <Card title="Hapus data pribadi" icon={Trash2}>
         <Txt muted>
           Ketik HAPUS untuk mengosongkan transaksi dan rencana pribadi. Tindakan
           ini tidak dapat dibatalkan.
@@ -254,6 +359,7 @@ export default function AccountScreen() {
           autoCapitalize="characters"
         />
         <Button
+          icon={Trash2}
           danger
           title="Hapus semua data pribadi"
           disabled={busy || reset !== "HAPUS"}

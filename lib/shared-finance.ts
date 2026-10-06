@@ -20,6 +20,7 @@ export type SharedEntry = z.infer<typeof sharedEntrySchema> & {
   authorName: string;
 };
 export type SharedFinance = {
+  availableCategories?: string[];
   entries: SharedEntry[];
   budgets: Budget[];
   categories?: string[];

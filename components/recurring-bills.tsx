@@ -91,7 +91,7 @@ export default function RecurringBillsPanel({
           }}
         >
           <datalist id="recurring-categories">
-            {categoryOptions(data).map((name) => (
+            {(data.availableCategories ?? categoryOptions(data)).map((name) => (
               <option key={name} value={name} />
             ))}
           </datalist>

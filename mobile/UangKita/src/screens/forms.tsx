@@ -5,6 +5,7 @@ import { randomUUID } from "expo-crypto";
 import {
   Button,
   Card,
+  ChoicePicker,
   DateField,
   Field,
   Page,
@@ -16,7 +17,9 @@ import { useFinance } from "@/lib/store";
 import { useSpace, type SharedData } from "@/lib/shared";
 import {
   categoryOptions,
+  existingCategory,
   money,
+  normalize,
   recurringDate,
   today,
   type CreditPayment,
@@ -35,7 +38,7 @@ export function FormScreen() {
   const shared = useSpace(params.scope);
   if (params.scope && !shared.data)
     return (
-      <Page tabs={false} period={false}>
+      <Page period={false}>
         <Card>
           <Txt>{shared.error || "Memuat data ruang…"}</Txt>
           <Button
@@ -180,7 +183,7 @@ function FormEditor({
       (kind === "recurring" && !recurring))
   )
     return (
-      <Page period={false} tabs={false}>
+      <Page period={false}>
         <Card>
           <Txt>Data tidak ditemukan. Muat ulang layar sebelumnya.</Txt>
         </Card>
@@ -188,7 +191,7 @@ function FormEditor({
     );
   if (readOnly)
     return (
-      <Page period={false} tabs={false}>
+      <Page period={false}>
         <Card title={entry?.note || entry?.category || budget?.name}>
           <Txt>{money(entry?.amount ?? budget?.planned ?? 0)}</Txt>
           <Txt muted>
@@ -210,6 +213,7 @@ function FormEditor({
       return;
     }
     let action: unknown;
+    const category = (value: string) => existingCategory(value, categories);
     if (kind === "entry") {
       const expense = type === "out" || type === "fixed";
       action = {
@@ -218,7 +222,7 @@ function FormEditor({
           id: entry?.id ?? randomUUID(),
           type,
           amount: Number(amount),
-          category: name,
+          category: category(name),
           note,
           date,
           active,
@@ -245,7 +249,7 @@ function FormEditor({
         budget: {
           id: budget?.id ?? randomUUID(),
           month: budget?.month ?? month,
-          name,
+          name: category(name),
           planned: Number(amount),
         },
       };
@@ -263,7 +267,7 @@ function FormEditor({
           id: recurring?.id ?? randomUUID(),
           name,
           amount: Number(amount),
-          category: note,
+          category: category(note),
           day: Number(day),
           startMonth,
           active,
@@ -304,9 +308,9 @@ function FormEditor({
         ["deposit", "Setoran"],
         ["withdraw", "Penarikan"],
       ];
-  const categories = categoryOptions(source);
+  const categories = source.availableCategories ?? categoryOptions(source);
   return (
-    <Page period={false} tabs={false}>
+    <Page period={false}>
       <Txt large>{title}</Txt>
       <Txt muted>{shared ? space?.name : month}</Txt>
       {kind === "entry" && (
@@ -352,21 +356,27 @@ function FormEditor({
           onChangeText={setName}
           maxLength={80}
           editable={!busy}
+          placeholder={
+            kind === "entry" || kind === "budget"
+              ? "Pilih di bawah atau tulis kategori baru"
+              : undefined
+          }
         />
       )}
       {(kind === "entry" || kind === "budget") && (
-        <Row>
-          {categories.slice(0, 8).map((category) => (
-            <Button
-              key={category}
-              compact
-              secondary
-              title={category}
-              disabled={busy}
-              onPress={() => setName(category)}
-            />
-          ))}
-        </Row>
+        <ChoicePicker
+          label="Kategori tersimpan"
+          value={
+            categories.find((category) => normalize(category) === normalize(name)) ?? name
+          }
+          onChange={setName}
+          searchable
+          disabled={busy}
+          options={[
+            { value: "", label: "Pilih kategori" },
+            ...categories.map((category) => ({ value: category, label: category })),
+          ]}
+        />
       )}
       {kind === "entry" && (
         <>

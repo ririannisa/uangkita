@@ -14,9 +14,7 @@ Copy-Item .env.example .env.local
 npm start
 ```
 
-Buka di Expo Go yang mendukung SDK 57 atau development build yang sesuai. Android emulator dapat dibuka dengan `npm run android`. `npm run web` menyediakan pratinjau browser menggunakan mode demo; login ke API lintas origin ditujukan untuk Android/iOS.
-
-Mode demo dapat dipakai tanpa domain API. Perubahan demo disimpan di perangkat; tombol keluar kembali ke layar login. Data demo tidak dikirim ke server.
+Buka di Expo Go yang mendukung SDK 57 atau development build yang sesuai. Android emulator dapat dibuka dengan `npm run android`. Aplikasi memerlukan login dan koneksi ke API. `npm run web` menyediakan pratinjau browser; login email pada browser memerlukan origin yang diizinkan server, sedangkan login Google ditujukan untuk Android/iOS.
 
 ## Fitur
 
@@ -48,6 +46,10 @@ API client menggunakan `/api/auth/*`, `/api/finance`, `/api/spaces`, dan `/api/s
 
 Perhitungan dan skema validasi dipakai dari `../../lib/` melalui `src/lib/finance.ts`. Metro menyelesaikan dependensi dari `mobile/UangKita/node_modules`, agar React Native tidak tercampur dengan React web. Build Next di root mengecualikan `mobile/` dari TypeScript dan ESLint.
 
+Jatah makan harian dihitung oleh API Next.js `/api/finance` dan dikirim lewat `budgets[].dailyFoodAllowance`; mobile hanya menampilkan hasilnya. Deploy backend terbaru diperlukan agar jatah harian muncul.
+
+Daftar pilihan kategori form berasal dari `availableCategories` pada respons pribadi maupun ruang bersama. Filter aktivitas pribadi memakai `activityCategories`, termasuk kategori transfer ruang. API menyatukan variasi huruf besar/kecil dan spasi tepi dengan nama yang sudah tersimpan. Kontrak endpoint lengkap dicatat di README repository.
+
 ## Pemeriksaan
 
 ```powershell
@@ -63,7 +65,7 @@ Tes UI memakai Playwright milik web. Dari root repository:
 npx playwright test --config mobile/UangKita/playwright.config.ts
 ```
 
-Tes UI menjalankan React Native melalui React Native Web dan memeriksa riwayat fitur, kembali setelah menyimpan form, validasi, target tabungan, dan persistensi demo. Tes ini tidak menggantikan pengujian tombol Back pada perangkat Android fisik atau pengujian login live.
+Tes UI menjalankan React Native melalui React Native Web dengan API tiruan yang hanya ada di file tes. Tes memeriksa login, pemulihan sesi, riwayat fitur, kembali setelah menyimpan form, validasi, dan target tabungan. Tes ini tidak menggantikan pengujian tombol Back pada perangkat Android fisik atau pengujian login live.
 
 ## APK
 

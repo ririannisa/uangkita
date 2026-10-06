@@ -15,6 +15,9 @@ import {
   ChartNoAxesCombined,
   UsersRound,
   Tags,
+  Filter,
+  RotateCcw,
+  Search,
 } from "lucide-react-native";
 import { router } from "expo-router";
 import {
@@ -23,10 +26,12 @@ import {
   IconButton,
   MonthPicker,
   Card,
+  ChoicePicker,
   Field,
   Metric,
   Page,
   Progress,
+  DailyFoodAllowance,
   Row,
   Transactions,
   Txt,
@@ -43,8 +48,16 @@ import {
   monthLabel,
   realization,
   savingsProgress,
+  categoryOptions,
 } from "@/lib/finance";
-import { shiftMonth } from "@/lib/core";
+import { analyticsData, filterActivity } from "@/lib/analytics";
+import {
+  BudgetChart,
+  CashFlowChart,
+  CategoryChart,
+  CreditGauge,
+} from "@/components/analytics-charts";
+import { NeonBackground } from "@/components/neon-background";
 import { chickenIcon } from "../../../../lib/chicken-icon";
 const Chicken = createLucideIcon("chicken", chickenIcon);
 
@@ -109,8 +122,10 @@ export function HomeScreen() {
               borderWidth: 1,
               borderColor: c.line,
               overflow: "hidden",
+              boxShadow: c.neon ? "0 0 32px #8b5cf633" : undefined,
             }}
           >
+            {c.neon && <NeonBackground />}
             <View
               style={{
                 flexDirection: "row",
@@ -140,7 +155,13 @@ export function HomeScreen() {
                 Rupiah · IDR
               </Text>
             </View>
-            <View style={{ paddingHorizontal: 19, paddingTop: 8 }}>
+            <View
+              style={{
+                paddingHorizontal: 20,
+                paddingTop: 12,
+                paddingBottom: 4,
+              }}
+            >
               <View
                 style={{
                   flexDirection: "row",
@@ -179,6 +200,7 @@ export function HomeScreen() {
                   borderTopWidth: 1,
                   borderColor: c.line,
                   marginTop: 18,
+                  paddingVertical: 16,
                 }}
               >
                 <ReceiptText size={17} color={c.primary} />
@@ -392,56 +414,86 @@ export function ActivityScreen() {
   const { data, month } = useFinance();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [category, setCategory] = useState("");
   const entries = useMemo(
-    () =>
-      data.entries
-        .filter(
-          (e) =>
-            inActivityMonth(e, month) &&
-            (filter === "all" ||
-              (filter === "credit"
-                ? e.paymentMethod === "credit"
-                : e.type === filter)) &&
-            `${e.note} ${e.category}`
-              .toLowerCase()
-              .includes(query.toLowerCase()),
-        )
-        .sort((a, b) => b.date.localeCompare(a.date)),
-    [data, month, query, filter],
+    () => filterActivity(data.entries, month, filter, category, query),
+    [data, month, query, filter, category],
   );
   return (
     <Page>
-      <Field
-        label="Cari transaksi"
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Kategori atau catatan"
-      />
-      <Row>
-        {[
-          ["all", "Semua"],
-          ["in", "Masuk"],
-          ["out", "Keluar"],
-          ["fixed", "Tetap"],
-          ["deposit", "Setoran"],
-          ["withdraw", "Penarikan"],
-          ["credit", "Kredit"],
-        ].map(([value, label]) => (
-          <Button
-            compact
-            secondary={filter !== value}
-            key={value}
-            title={label}
-            onPress={() => setFilter(value)}
+      <Card title="Temukan transaksi" icon={Search}>
+        <Field
+          label="Cari transaksi"
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Cari catatan atau nama transaksi"
+        />
+        <Row>
+          <ChoicePicker
+            label="Jenis transaksi"
+            value={filter}
+            onChange={setFilter}
+            options={[
+              ["all", "Semua"],
+              ["in", "Masuk"],
+              ["out", "Keluar"],
+              ["fixed", "Tetap"],
+              ["deposit", "Setoran"],
+              ["withdraw", "Penarikan"],
+              ["credit", "Kredit"],
+            ].map(([value, label]) => ({ value, label }))}
           />
-        ))}
-      </Row>
+          <ChoicePicker
+            label="Kategori"
+            value={category}
+            onChange={setCategory}
+            searchable
+            options={[
+              { value: "", label: "Semua kategori" },
+              ...(data.activityCategories ?? categoryOptions(data, true)).map((name) => ({
+                value: name,
+                label: name,
+              })),
+            ]}
+          />
+        </Row>
+        {(filter !== "all" || !!category || !!query) && (
+          <Button
+            secondary
+            compact
+            icon={RotateCcw}
+            title="Reset filter"
+            onPress={() => {
+              setFilter("all");
+              setCategory("");
+              setQuery("");
+            }}
+          />
+        )}
+      </Card>
       <Button
         title="＋ Catat transaksi"
         onPress={() => router.push("/form?kind=entry&type=out")}
       />
       <Txt muted>{entries.length} transaksi · ketuk untuk lihat atau ubah</Txt>
-      <Transactions key={`${month}:${filter}:${query}`} entries={entries} />
+      {!entries.length && (!!category || filter !== "all" || !!query) && (
+        <Card icon={Filter} title="Tidak ada transaksi yang cocok">
+          <Txt muted>Coba kategori atau jenis lain, atau reset filter.</Txt>
+        </Card>
+      )}
+      {!entries.length && !category && filter === "all" && !query && (
+        <Card title="Belum ada transaksi bulan ini">
+          <Txt muted>
+            Mulai dengan mencatat pemasukan atau pengeluaran pertamamu.
+          </Txt>
+        </Card>
+      )}
+      {!!entries.length && (
+        <Transactions
+          key={`${month}:${filter}:${category}:${query}`}
+          entries={entries}
+        />
+      )}
     </Page>
   );
 }
@@ -565,6 +617,7 @@ export function BudgetScreen() {
                   {r.transactions[0].note || r.transactions[0].category}
                 </Txt>
               )}
+              <DailyFoodAllowance budget={b} />
               <Button
                 secondary
                 title={`Rincian ${b.name}`}
@@ -700,144 +753,102 @@ export function BillsScreen() {
   );
 }
 export function AnalyticsScreen() {
-  const { data, month } = useFinance();
+  const { data, month, hidden } = useFinance();
   const c = useColors();
   const f = figures(data, month);
   const credit = creditFigures(data, month);
   const health = creditHealth(data, month);
-  const categories = [
-    ...new Set(
-      data.entries
-        .filter(
-          (e) =>
-            e.active &&
-            !e.spaceId &&
-            e.date.startsWith(month) &&
-            (e.type === "out" || e.type === "fixed"),
-        )
-        .map((e) => e.category),
-    ),
-  ]
-    .map((name) => ({
-      name,
-      amount: data.entries
-        .filter(
-          (e) =>
-            e.active &&
-            !e.spaceId &&
-            e.date.startsWith(month) &&
-            e.category === name &&
-            (e.type === "out" || e.type === "fixed"),
-        )
-        .reduce((s, e) => s + e.amount, 0),
-    }))
-    .sort((a, b) => b.amount - a.amount);
+  const report = analyticsData(data, month);
+  const maximumCredit = Math.max(
+    1,
+    ...credit.categories.map((row) => row.outstanding),
+  );
   return (
     <Page>
-      <Card title="Ringkasan bulan ini">
+      <View style={{ gap: 8 }}>
+        <Text
+          style={{
+            color: c.primary,
+            fontSize: 11,
+            fontWeight: "700",
+            letterSpacing: 1.2,
+          }}
+        >
+          CERITA DI BALIK ANGKA
+        </Text>
+        <Txt large>Kenali pola uangmu.</Txt>
+        <Txt muted>
+          Pengeluaran, rencana, dan beban kredit dalam satu pandangan.
+        </Txt>
+      </View>
+      <Card title="Ringkasan bulan ini" icon={ChartNoAxesCombined} tone="lilac">
         <Metric label="Pemasukan" value={f.income} />
         <Metric label="Pengeluaran tercatat" value={f.expense} />
         <Metric label="Pengeluaran dibayar" value={f.cashExpense} />
         <Metric label="Tabungan bersih" value={f.saved} />
         <Metric label="Transfer ruang bersama" value={f.transferred} />
-      </Card>
-      <Card title="Arus kas 6 bulan">
-        {Array.from({ length: 6 }, (_, i) => shiftMonth(month, i - 5)).map(
-          (m) => {
-            const v = figures(data, m);
-            const max = Math.max(
-              v.income,
-              v.cashExpense + v.saved + v.transferred,
-              1,
-            );
-            return (
-              <View key={m} style={{ gap: 6 }}>
-                <Txt bold>{monthLabel(m)}</Txt>
-                <Txt muted>
-                  Masuk {money(v.income)} · keluar{" "}
-                  {money(v.cashExpense + v.saved + v.transferred)}
-                </Txt>
-                <View
-                  style={{
-                    height: 7,
-                    backgroundColor: c.line,
-                    borderRadius: 6,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: `${Math.min(100, Math.max(0, (v.income / max) * 100))}%`,
-                      height: 7,
-                      backgroundColor: c.green,
-                    }}
-                  />
-                </View>
-                <View
-                  style={{
-                    height: 7,
-                    backgroundColor: c.line,
-                    borderRadius: 6,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: `${Math.min(100, Math.max(0, ((v.cashExpense + v.saved + v.transferred) / max) * 100))}%`,
-                      height: 7,
-                      backgroundColor: c.primary,
-                    }}
-                  />
-                </View>
-              </View>
-            );
-          },
-        )}
         <Txt muted>
-          Hijau: masuk · Ungu: keluar (termasuk tabungan dan transfer). Skala
-          dibandingkan dalam tiap bulan.
+          Kategori terbesar:{" "}
+          {report.categories[0]?.name ?? "Belum ada pengeluaran"}.
         </Txt>
       </Card>
-      <Card title="Pengeluaran per kategori">
-        {categories.length ? (
-          categories.map((row) => (
-            <View key={row.name} style={{ gap: 8 }}>
-              <Txt>
-                {row.name} · {money(row.amount)}
-              </Txt>
-              <Progress
-                percent={Math.round(
-                  (row.amount / Math.max(f.expense, 1)) * 100,
-                )}
-                label={row.name}
-              />
-            </View>
-          ))
-        ) : (
-          <Txt muted>Grafik terisi setelah kamu mencatat pengeluaran.</Txt>
-        )}
-      </Card>
-      <Card title={`Kesehatan kredit · ${health.status}`}>
-        <Metric label="Beban pembayaran bulan ini" value={health.burden} />
-        <Metric label="Acuan 30% pemasukan" value={health.limit} />
+      <CashFlowChart key={month} periods={report.periods} />
+      <CategoryChart
+        key={"categories-" + month}
+        slices={report.slices}
+        total={report.total}
+      />
+      <BudgetChart budgets={report.budgets} />
+      {!report.budgets.length && (
+        <Button
+          secondary
+          title="Buat rencana anggaran"
+          icon={Target}
+          onPress={() => router.push("/form?kind=budget")}
+        />
+      )}
+      <CreditGauge health={health} />
+      <Card title="Komposisi kredit" icon={Wallet}>
         <Metric
           label="Sisa kredit seluruh periode"
           value={credit.outstanding}
         />
         <Metric label="Kredit baru bulan ini" value={credit.borrowed} />
         <Metric label="Pembayaran kredit bulan ini" value={credit.paid} />
-        {health.reasons.map((reason) => (
-          <Txt muted key={reason}>
-            {reason}
-          </Txt>
-        ))}
+        {credit.categories.length ? (
+          credit.categories.map((row) => (
+            <View key={row.name} style={{ gap: 9, paddingVertical: 8 }}>
+              <Txt bold>{row.name}</Txt>
+              <View
+                style={{ height: 14, borderRadius: 7, backgroundColor: c.line }}
+              >
+                <View
+                  style={{
+                    height: 14,
+                    borderRadius: 7,
+                    backgroundColor: c.primary,
+                    width: `${(row.outstanding / maximumCredit) * 100}%`,
+                  }}
+                />
+              </View>
+              <Text style={{ color: c.muted, fontSize: 12, lineHeight: 19 }}>
+                {hidden
+                  ? "Nominal disembunyikan"
+                  : "Sisa " +
+                    money(row.outstanding) +
+                    " ? dibayar bulan ini " +
+                    money(row.paid)}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Txt muted>Belum ada kredit aktif pada periode ini.</Txt>
+        )}
+        <Txt muted>
+          Panjang batang membandingkan sisa kredit antar kategori, bukan jumlah
+          kredit baru.
+        </Txt>
       </Card>
-      {credit.categories.map((row) => (
-        <Card key={row.name} title={row.name}>
-          <Txt>
-            Kredit baru {money(row.borrowed)} · dibayar {money(row.paid)} · sisa{" "}
-            {money(row.outstanding)}
-          </Txt>
-        </Card>
-      ))}
     </Page>
   );
 }

@@ -12,6 +12,7 @@ import {
   inActivityMonth,
   creditStatus,
   remainingCredit,
+  normalize,
   type CreditPayment,
   type FinanceData,
 } from "@/lib/finance";
@@ -335,6 +336,9 @@ function SharedRoom({
   const [creditPayments, setCreditPayments] = useState<CreditPayment[]>([]);
   const [entryAmount, setEntryAmount] = useState(0);
   const [editingEntry, setEditingEntry] = useState<SharedEntry | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [category, setCategory] = useState("");
   const endpoint = `/api/spaces/${space.id}/finance`;
   const load = async () => {
     const d = await api(endpoint);
@@ -452,7 +456,7 @@ function SharedRoom({
                         category: f.get("category"),
                         note: f.get("note"),
                         date: f.get("date"),
-                        active: editingEntry?.active ?? true,
+                        active: f.get("active") === "on",
                         paymentMethod:
                           entryType === "out" ? paymentMethod : "direct",
                         dueDate:
@@ -523,7 +527,7 @@ function SharedRoom({
                   />
                 </label>
                 <datalist id="shared-categories">
-                  {categoryOptions(data).map((name) => (
+                  {(data.availableCategories ?? categoryOptions(data)).map((name) => (
                     <option key={name} value={name} />
                   ))}
                 </datalist>
@@ -586,6 +590,10 @@ function SharedRoom({
                     )}
                   </>
                 )}
+                <label className="check-label">
+                  <input type="checkbox" name="active" defaultChecked={editingEntry?.active ?? true} />
+                  Aktif dalam perhitungan
+                </label>
                 <button disabled={busy}>Simpan catatan</button>
                 {editingEntry && (
                   <button
@@ -717,6 +725,28 @@ function SharedRoom({
           </div>
           <section className="shared-card">
             <h2>Aktivitas kas</h2>
+            <div className="activity-category-filter">
+              <label>Cari transaksi ruang
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Catatan atau kategori" />
+              </label>
+              <label>Jenis transaksi ruang
+                <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+                  <option value="all">Semua</option>
+                  <option value="contribution">Kontribusi</option>
+                  <option value="out">Pengeluaran</option>
+                  <option value="credit">Kredit</option>
+                </select>
+              </label>
+              <label>Kategori transaksi ruang
+                <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                  <option value="">Semua kategori</option>
+                  {(data.availableCategories ?? categoryOptions(data)).map((name) => <option key={name} value={name}>{name}</option>)}
+                </select>
+              </label>
+              {(query || category || filter !== "all") && <button onClick={() => {
+                setQuery(""); setCategory(""); setFilter("all");
+              }}>Reset filter ruang</button>}
+            </div>
             <p className="space-note">
               Termasuk kredit belum lunas dari bulan sebelumnya dan kredit yang
               dibayar pada bulan ini.
@@ -725,7 +755,10 @@ function SharedRoom({
               <p>Belum ada transaksi. Mulai dari kontribusi pertama ✨</p>
             )}
             {data.entries
-              .filter((e) => inActivityMonth(e, month))
+              .filter((e) => inActivityMonth(e, month)
+                && (filter === "all" || (filter === "credit" ? e.paymentMethod === "credit" : e.type === filter))
+                && (!category || normalize(e.category) === normalize(category))
+                && normalize(`${e.note} ${e.category}`).includes(normalize(query)))
               .map((e) => (
                 <div className="space-row" key={e.id}>
                   <span>
@@ -796,7 +829,7 @@ function SharedRoom({
           <details>
             <summary>Kelola Kategori Ruang</summary>
             <CategoryManager
-              names={categoryOptions(data)}
+              names={data.availableCategories ?? categoryOptions(data)}
               readOnly={space.role !== "owner"}
               onAdd={(name) => mutate({ action: "category", name })}
             />

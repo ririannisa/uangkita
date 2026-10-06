@@ -2,6 +2,19 @@
 
 import { memo, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+const FinancialBars = dynamic(() =>
+  import("./analytics-charts").then((m) => m.FinancialBars),
+);
+const CategoryDonut = dynamic(() =>
+  import("./analytics-charts").then((m) => m.CategoryDonut),
+);
+const CreditBurdenChart = dynamic(() =>
+  import("./analytics-charts").then((m) => m.CreditBurdenChart),
+);
+const BudgetRealizationChart = dynamic(() =>
+  import("./analytics-charts").then((m) => m.BudgetRealizationChart),
+);
 import CategoryManager from "./category-manager";
 import CreditPaymentFields from "./credit-payment-fields";
 import SavingsGoalPanel from "./savings-goal";
@@ -47,6 +60,8 @@ import {
 import { authClient } from "@/lib/auth/client";
 import {
   backupSchema,
+  applyMutation,
+  canonicalMutation,
   dateLabel,
   emptyData,
   figures,
@@ -129,6 +144,7 @@ export default function Dashboard({
   const [hidden, setHidden] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [category, setCategory] = useState("");
   const [modal, setModal] = useState<Modal | null>(null);
   const [entryType, setEntryType] = useState<Entry["type"]>("out");
   const [paymentMethod, setPaymentMethod] = useState("direct");
@@ -141,9 +157,23 @@ export default function Dashboard({
   const dialog = useRef<HTMLDialogElement>(null);
   const categoryDialog = useRef<HTMLDialogElement>(null);
   const importInput = useRef<HTMLInputElement>(null);
+  const themeSelect = useRef<HTMLSelectElement>(null);
+  function changeTheme(theme: string) {
+    document.documentElement.dataset.themePreference = theme;
+    document.documentElement.dataset.theme = theme === "auto"
+      ? matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      : theme;
+    if (themeSelect.current) themeSelect.current.value = theme;
+    try {
+      localStorage.setItem("uangkita-theme", theme);
+    } catch {
+      // Theme still works when browser storage is unavailable.
+    }
+  }
   const pending = useRef(false);
   const f = useMemo(() => figures(data, month), [data, month]);
-  const categories = useMemo(() => categoryOptions(data), [data]);
+  const categories = useMemo(() => data.availableCategories ?? categoryOptions(data), [data]);
+  const activityCategories = useMemo(() => data.activityCategories ?? categoryOptions(data, true), [data]);
   const budgets = useMemo(
     () =>
       data.budgets
@@ -175,6 +205,7 @@ export default function Dashboard({
     setTab(next);
     setQuery("");
     setFilter("all");
+    setCategory("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -203,87 +234,15 @@ export default function Dashboard({
     setFormError("");
     try {
       if (demo) {
-        if (
-          action.action === "entry" &&
-          action.entry.recurringId &&
-          data.entries.some(
-            (e) =>
-              e.id !== action.entry.id &&
-              e.recurringId === action.entry.recurringId &&
-              e.date.slice(0, 7) === action.entry.date.slice(0, 7),
-          )
-        )
-          throw new Error(
-            "Tagihan berulang tersebut sudah tercatat pada bulan ini.",
-          );
-        if (
-          action.action === "budget" &&
-          data.budgets.some(
-            (b) =>
-              b.id !== action.budget.id &&
-              b.month === action.budget.month &&
-              normalize(b.name) === normalize(action.budget.name),
-          )
-        )
-          throw new Error("Kategori sudah memiliki anggaran pada bulan ini.");
-        setData((current) => {
-          if (action.action === "savingsGoal")
-            return { ...current, savingsGoal: action.goal };
-          if (action.action === "recurringBill")
-            return {
-              ...current,
-              recurringBills: [
-                ...(current.recurringBills ?? []).filter(
-                  (b) => b.id !== action.bill.id,
-                ),
-                action.bill,
-              ],
-            };
-          if (action.action === "category")
-            return {
-              ...current,
-              categories: [...(current.categories ?? []), action.name.trim()],
-            };
-          if (action.action === "entry")
-            return {
-              ...current,
-              entries: [
-                ...current.entries.filter((e) => e.id !== action.entry.id),
-                action.entry,
-              ],
-            };
-          if (action.action === "budget")
-            return {
-              ...current,
-              budgets: [
-                ...current.budgets.filter((b) => b.id !== action.budget.id),
-                action.budget,
-              ],
-            };
-          if (action.action === "income")
-            return {
-              ...current,
-              plans: [
-                ...current.plans.filter((p) => p.month !== action.plan.month),
-                action.plan,
-              ],
-            };
-          if (action.action === "delete")
-            return {
-              ...current,
-              entries:
-                action.kind === "entry"
-                  ? current.entries.filter((e) => e.id !== action.id)
-                  : current.entries,
-              budgets:
-                action.kind === "budget"
-                  ? current.budgets.filter((b) => b.id !== action.id)
-                  : current.budgets,
-            };
-          if (action.action === "import") return action.backup;
-          if (action.action === "reset") return emptyData;
-          return current;
+        const next = applyMutation(data, canonicalMutation(action, categories));
+        const response = await fetch("/api/finance/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ version: 1, ...next }),
         });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        setData(result);
       } else {
         const response = await fetch("/api/finance", {
           method: "POST",
@@ -390,7 +349,7 @@ export default function Dashboard({
               : String(form.get("category")).trim(),
           note: String(form.get("note") ?? "").trim(),
           date: String(form.get("date")),
-          active: entryType === "fixed" ? (modal.entry?.active ?? true) : true,
+          active: form.get("active") === "on",
           paymentMethod:
             (entryType === "out" || entryType === "fixed") &&
             paymentMethod === "credit"
@@ -458,11 +417,11 @@ export default function Dashboard({
       new Blob(
         [
           JSON.stringify(
-            {
+            backupSchema.parse({
               version: 1,
               ...data,
               entries: data.entries.filter((e) => !e.spaceId),
-            },
+            }),
             null,
             2,
           ),
@@ -626,6 +585,21 @@ export default function Dashboard({
           </span>
           <b>{r.percent}% terpakai</b>
         </div>
+        {b.dailyFoodAllowance && (
+          <div className="daily-food-allowance">
+            <div className="budget-caption">
+              <span>Jatah makan per hari</span>
+              <strong>{hidden ? "••••••" : money(b.dailyFoodAllowance.daily)}</strong>
+            </div>
+            <p className="small muted">
+              {b.dailyFoodAllowance.cashLimited
+                ? "Sisa uang saat ini lebih kecil dari sisa anggaran makan, jadi jatah mengikuti uang yang tersedia."
+                : "Jatah dihitung dari sisa anggaran makan."}{" "}
+              Dibagi {b.dailyFoodAllowance.days} hari sampai akhir bulan
+              {b.dailyFoodAllowance.includesToday ? ", termasuk hari ini" : ""}.
+            </p>
+          </div>
+        )}
         {!compact && (
           <>
             <div className="largest-expense">
@@ -736,16 +710,7 @@ export default function Dashboard({
                 aria-label="Ganti tema terang atau gelap"
                 title="Ganti tema terang atau gelap"
                 onClick={() => {
-                  const theme =
-                    document.documentElement.dataset.theme === "dark"
-                      ? "light"
-                      : "dark";
-                  document.documentElement.dataset.theme = theme;
-                  try {
-                    localStorage.setItem("uangkita-theme", theme);
-                  } catch {
-                    // The toggle still works when browser storage is unavailable.
-                  }
+                  changeTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
                 }}
               >
                 <Moon size={20} className="theme-moon" />
@@ -1096,6 +1061,9 @@ export default function Dashboard({
                     ["out", "Pengeluaran"],
                     ["in", "Pemasukan"],
                     ["fixed", "Tetap"],
+                    ["deposit", "Setoran"],
+                    ["withdraw", "Penarikan"],
+                    ["credit", "Kredit"],
                     ["transfer", "Transfer bersama"],
                   ].map(([value, label]) => (
                     <button
@@ -1107,6 +1075,20 @@ export default function Dashboard({
                       {label}
                     </button>
                   ))}
+                </div>
+                <div className="activity-category-filter">
+                  <label>
+                    Kategori transaksi
+                    <select value={category} onChange={(event) => setCategory(event.target.value)}>
+                      <option value="">Semua kategori</option>
+                      {activityCategories.map((name) => <option key={name} value={name}>{name}</option>)}
+                    </select>
+                  </label>
+                  {(query || category || filter !== "all") && (
+                    <button className="text-button" onClick={() => {
+                      setQuery(""); setCategory(""); setFilter("all");
+                    }}>Reset filter</button>
+                  )}
                 </div>
                 {filter === "fixed" && (
                   <RecurringBillsPanel
@@ -1130,7 +1112,8 @@ export default function Dashboard({
                         (filter === "all" ||
                           (filter === "transfer"
                             ? !!e.spaceId
-                            : !e.spaceId && e.type === filter)) &&
+                            : !e.spaceId && (filter === "credit" ? e.paymentMethod === "credit" : e.type === filter))) &&
+                        (!category || normalize(e.category) === normalize(category)) &&
                         normalize(e.note + e.category).includes(
                           normalize(query),
                         ),
@@ -1301,6 +1284,18 @@ export default function Dashboard({
                   <h2>Pengaturan keuangan</h2>
                 </div>
                 <div className="panel settings-list">
+                  <label className="theme-setting">
+                    Tema aplikasi
+                    <select ref={(element) => {
+                      themeSelect.current = element;
+                      if (element) element.value = document.documentElement.dataset.themePreference ?? "auto";
+                    }} defaultValue="auto" onChange={(event) => changeTheme(event.target.value)}>
+                      <option value="auto">Ikuti sistem</option>
+                      <option value="light">Terang</option>
+                      <option value="dark">Gelap</option>
+                      <option value="neon">Neon</option>
+                    </select>
+                  </label>
                   <button onClick={() => open({ kind: "income" })}>
                     <span className="category-icon">
                       <Wallet size={20} />
@@ -1641,6 +1636,10 @@ export default function Dashboard({
                       transaksi.
                     </p>
                   )}
+                  <label className="check-label">
+                    <input type="checkbox" name="active" defaultChecked={modal.entry?.active ?? true} />
+                    Aktif dalam perhitungan
+                  </label>
                 </>
               )}
               {modal.kind === "income" && (
@@ -1737,13 +1736,8 @@ const Analytics = memo(function Analytics({
     const totals = figures(data, key);
     return { key, ...totals, credit: creditFigures(data, key, totals.income) };
   });
-  const max = Math.max(1, ...periods.flatMap((p) => [p.income, p.cashExpense]));
   const credit = periods[periods.length - 1].credit;
   const health = creditHealth(data, month);
-  const creditMax = Math.max(
-    1,
-    ...periods.flatMap((p) => [p.credit.borrowed, p.credit.paid]),
-  );
   const percentLabel = (value: number | null) =>
     value === null
       ? "Belum ada pemasukan"
@@ -1782,6 +1776,7 @@ const Analytics = memo(function Analytics({
           <strong>{money(total / days)}</strong>
         </div>
       </div>
+      <BudgetRealizationChart data={data} month={month} />
       <section className="panel chart-panel">
         <h2>Arus kas 6 bulan</h2>
         <p className="muted small">
@@ -1795,25 +1790,14 @@ const Analytics = memo(function Analytics({
             <i className="expense-dot" /> Pengeluaran
           </span>
         </div>
-        <div className="bar-chart">
-          {periods.map((p) => (
-            <div className="bar-column" key={p.key}>
-              <div className="bars">
-                <div
-                  className="bar income-bar"
-                  style={{ height: `${(p.income / max) * 100}%` }}
-                  title={`Pemasukan ${money(p.income)}`}
-                />
-                <div
-                  className="bar expense-bar"
-                  style={{ height: `${(p.cashExpense / max) * 100}%` }}
-                  title={`Pembayaran ${money(p.cashExpense)}`}
-                />
-              </div>
-              <span>{monthLabel(p.key).split(" ")[0].slice(0, 3)}</span>
-            </div>
-          ))}
-        </div>
+        <FinancialBars
+          rows={periods.map((p) => ({
+            label: monthLabel(p.key).split(" ")[0].slice(0, 3),
+            first: p.income,
+            second: p.cashExpense,
+          }))}
+          series={["Pemasukan", "Pengeluaran dibayar"]}
+        />
         <details className="chart-table">
           <summary>Lihat angka lengkap</summary>
           <table>
@@ -1842,6 +1826,7 @@ const Analytics = memo(function Analytics({
         aria-labelledby="credit-health-title"
       >
         <h2 id="credit-health-title">Analisis beban kredit</h2>
+        <CreditBurdenChart health={health} />
         <p>
           <strong
             className={
@@ -1940,31 +1925,14 @@ const Analytics = memo(function Analytics({
             <i className="income-dot" /> Lunas
           </span>
         </div>
-        <div
-          className="bar-chart"
-          role="img"
-          aria-label="Grafik kredit baru dan pelunasan selama enam bulan; angka lengkap tersedia di bawah"
-        >
-          {periods.map((p) => (
-            <div className="bar-column" key={p.key}>
-              <div className="bars">
-                <div
-                  className="bar expense-bar"
-                  style={{
-                    height: `${(p.credit.borrowed / creditMax) * 100}%`,
-                  }}
-                  title={`Kredit baru ${money(p.credit.borrowed)}`}
-                />
-                <div
-                  className="bar income-bar"
-                  style={{ height: `${(p.credit.paid / creditMax) * 100}%` }}
-                  title={`Lunas ${money(p.credit.paid)}`}
-                />
-              </div>
-              <span>{monthLabel(p.key).split(" ")[0].slice(0, 3)}</span>
-            </div>
-          ))}
-        </div>
+        <FinancialBars
+          rows={periods.map((p) => ({
+            label: monthLabel(p.key).split(" ")[0].slice(0, 3),
+            first: p.credit.paid,
+            second: p.credit.borrowed,
+          }))}
+          series={["Lunas", "Kredit baru"]}
+        />
         <details className="chart-table">
           <summary>Lihat angka kredit lengkap</summary>
           <table>
@@ -2021,6 +1989,7 @@ const Analytics = memo(function Analytics({
       </section>
       <section className="panel chart-panel">
         <h2>Sebaran pengeluaran</h2>
+        <CategoryDonut categories={categories} />
         <p className="muted small">
           {monthLabel(month)} · total {money(total)}
         </p>

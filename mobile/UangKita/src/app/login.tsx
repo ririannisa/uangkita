@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import {
   Eye,
   EyeOff,
   ShieldCheck,
   Sparkles,
-  ArrowUpRight,
 } from "lucide-react-native";
 import Svg, { Path } from "react-native-svg";
 import {
@@ -32,7 +31,6 @@ export default function LoginScreen() {
   return (
     <Page
       period={false}
-      tabs={false}
       header={
         <>
           <Brand />
@@ -210,7 +208,6 @@ export default function LoginScreen() {
           disabled={
             store.busy ||
             !apiURL ||
-            Platform.OS === "web" ||
             !email.trim() ||
             password.length < 8 ||
             (register && !name.trim())
@@ -252,24 +249,6 @@ export default function LoginScreen() {
             Catatan pribadi, untuk kamu sendiri.
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Coba mode demo"
-          disabled={store.busy}
-          onPress={store.startDemo}
-          style={{
-            minHeight: 44,
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: 6,
-          }}
-        >
-          <Text style={{ fontSize: 12, color: c.primary }}>
-            Intip dulu juga boleh
-          </Text>
-          <ArrowUpRight size={16} color={c.primary} />
-        </Pressable>
       </View>
     </Page>
   );

@@ -16,16 +16,16 @@ export function useSpace(id?: string) {
   const [error, setError] = useState("");
   const pending = useRef(false);
   const reload = useCallback(async () => {
-    if (!id || store.demo) return;
+    if (!id) return;
     setData(
       await api<SharedData>(`/api/spaces/${encodeURIComponent(id)}/finance`),
     );
     setError("");
-  }, [id, store.demo]);
+  }, [id]);
   useFocusEffect(
     useCallback(() => {
       let alive = true;
-      if (id && !store.demo)
+      if (id)
         api<SharedData>(`/api/spaces/${encodeURIComponent(id)}/finance`)
           .then((result) => {
             if (alive) {
@@ -39,10 +39,10 @@ export function useSpace(id?: string) {
       return () => {
         alive = false;
       };
-    }, [id, store.demo]),
+    }, [id]),
   );
   async function save(input: unknown) {
-    if (!id || pending.current || store.demo) return false;
+    if (!id || pending.current) return false;
     pending.current = true;
     setBusy(true);
     setError("");

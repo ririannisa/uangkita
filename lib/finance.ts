@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { categoryActionSchema, categoryNameSchema } from "./categories";
+import { categoryActionSchema, categoryNameSchema, categoryOptions, existingCategory } from "./categories";
 
 export const money = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -138,9 +138,19 @@ export type CreditPayment = NonNullable<
 >[number];
 // Linked transfers are read-only projections of shared contributions, not personal writes.
 export type Entry = z.infer<typeof entrySchema> & { spaceId?: string };
-export type Budget = z.infer<typeof budgetSchema>;
+export type DailyFoodAllowance = {
+  days: number;
+  daily: number;
+  cashLimited: boolean;
+  includesToday: boolean;
+};
+export type Budget = z.infer<typeof budgetSchema> & {
+  dailyFoodAllowance?: DailyFoodAllowance | null;
+};
 export type Plan = z.infer<typeof planSchema>;
 export type FinanceData = {
+  availableCategories?: string[];
+  activityCategories?: string[];
   categories?: string[];
   entries: Entry[];
   budgets: Budget[];
@@ -208,6 +218,103 @@ export const mutationSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("reset"), confirmation: z.literal("HAPUS") }),
 ]);
 export type Mutation = z.infer<typeof mutationSchema>;
+
+export function canonicalMutation(action: Mutation, names: string[]): Mutation {
+  if (action.action === "entry")
+    return { ...action, entry: { ...action.entry, category: existingCategory(action.entry.category, names) } };
+  if (action.action === "budget")
+    return { ...action, budget: { ...action.budget, name: existingCategory(action.budget.name, names) } };
+  if (action.action === "recurringBill")
+    return { ...action, bill: { ...action.bill, category: existingCategory(action.bill.category, names) } };
+  if (action.action === "category")
+    return { ...action, name: existingCategory(action.name, names) };
+  return action;
+}
+
+export function applyMutation(data: FinanceData, a: Mutation): FinanceData {
+  switch (a.action) {
+    case "entry": {
+      if (data.entries.some((e) => e.id === a.entry.id && e.spaceId))
+        throw new Error("Transfer ruang bersama hanya dapat dibaca.");
+      if (
+        a.entry.recurringId &&
+        data.entries.some(
+          (e) =>
+            e.id !== a.entry.id &&
+            e.recurringId === a.entry.recurringId &&
+            e.date.slice(0, 7) === a.entry.date.slice(0, 7),
+        )
+      )
+        throw Object.assign(new Error(
+          "Tagihan berulang tersebut sudah tercatat pada bulan ini.",
+        ), { status: 409 });
+      const next = {
+        ...data,
+        entries: [...data.entries.filter((e) => e.id !== a.entry.id), a.entry],
+      };
+      if (
+        a.entry.type === "withdraw" &&
+        a.entry.active &&
+        figures(next, a.entry.date.slice(0, 7)).savings < 0
+      )
+        throw new Error("Nominal penarikan melebihi total tabungan.");
+      return next;
+    }
+    case "budget":
+      if (
+        data.budgets.some(
+          (b) =>
+            b.id !== a.budget.id &&
+            b.month === a.budget.month &&
+            normalize(b.name) === normalize(a.budget.name),
+        )
+      )
+        throw Object.assign(new Error("Kategori sudah memiliki anggaran pada bulan ini."), { status: 409 });
+      return {
+        ...data,
+        budgets: [
+          ...data.budgets.filter((b) => b.id !== a.budget.id),
+          a.budget,
+        ],
+      };
+    case "income":
+      return {
+        ...data,
+        plans: [...data.plans.filter((p) => p.month !== a.plan.month), a.plan],
+      };
+    case "savingsGoal":
+      return { ...data, savingsGoal: a.goal };
+    case "recurringBill":
+      return {
+        ...data,
+        recurringBills: [
+          ...(data.recurringBills ?? []).filter((b) => b.id !== a.bill.id),
+          a.bill,
+        ],
+      };
+    case "category":
+      return {
+        ...data,
+        categories: [...new Set([...(data.categories ?? []), a.name])],
+      };
+    case "delete":
+      return {
+        ...data,
+        entries:
+          a.kind === "entry"
+            ? data.entries.filter((e) => e.id !== a.id)
+            : data.entries,
+        budgets:
+          a.kind === "budget"
+            ? data.budgets.filter((b) => b.id !== a.id)
+            : data.budgets,
+      };
+    case "import":
+      return a.backup;
+    case "reset":
+      return { entries: [], budgets: [], plans: [] };
+  }
+}
 
 type Payable = {
   date: string;
@@ -390,6 +497,41 @@ export function realization(data: FinanceData, budget: Budget) {
     spent,
     remaining: budget.planned - spent,
     percent: Math.round((spent / budget.planned) * 100),
+  };
+}
+
+export function dailyFoodAllowance(
+  data: FinanceData,
+  budget: Budget,
+  asOf = today(),
+): DailyFoodAllowance | null {
+  const name = normalize(budget.name)
+    .replace(/\s*&\s*/g, " dan ")
+    .replace(/\s+/g, " ");
+  if (name !== "makan dan minum" || budget.month < asOf.slice(0, 7)) return null;
+  const [year, month] = budget.month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const includesToday = budget.month === asOf.slice(0, 7);
+  const days = includesToday ? lastDay - Number(asOf.slice(8, 10)) + 1 : lastDay;
+  const remaining = Math.max(0, realization(data, budget).remaining);
+  const balance = Math.max(0, figures(data, budget.month).balance);
+  return {
+    days,
+    daily: Math.floor(Math.min(remaining, balance) / days),
+    cashLimited: balance < remaining,
+    includesToday,
+  };
+}
+
+export function withFinanceDetails(data: FinanceData, asOf = today()): FinanceData {
+  return {
+    ...data,
+    availableCategories: categoryOptions(data),
+    activityCategories: categoryOptions(data, true),
+    budgets: data.budgets.map((budget) => ({
+      ...budget,
+      dailyFoodAllowance: dailyFoodAllowance(data, budget, asOf),
+    })),
   };
 }
 

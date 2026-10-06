@@ -1,5 +1,5 @@
 import Dashboard from "@/components/dashboard";
-import { today, type FinanceData } from "@/lib/finance";
+import { today, withFinanceDetails, type FinanceData } from "@/lib/finance";
 export const dynamic = "force-dynamic";
 export default function DemoPage() {
   const month = today().slice(0, 7);
@@ -103,7 +103,7 @@ export default function DemoPage() {
   return (
     <Dashboard
       user={{ name: "Annisa", email: "annisa@example.com" }}
-      initialData={initialData}
+      initialData={withFinanceDetails(initialData)}
       demo
     />
   );

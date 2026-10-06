@@ -24,7 +24,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try { document.documentElement.dataset.theme = localStorage.getItem("uangkita-theme") === "dark" ? "dark" : "light"; } catch {}`,
+            __html: `const root = document.documentElement; let stored; try { stored = localStorage.getItem("uangkita-theme"); } catch {} const preference = ["auto","light","dark","neon"].includes(stored) ? stored : "auto"; const media = matchMedia("(prefers-color-scheme: dark)"); root.dataset.themePreference = preference; root.dataset.theme = preference === "auto" ? (media.matches ? "dark" : "light") : preference; media.addEventListener("change", () => { if (root.dataset.themePreference === "auto") root.dataset.theme = media.matches ? "dark" : "light"; });`,
           }}
         />
       </head>

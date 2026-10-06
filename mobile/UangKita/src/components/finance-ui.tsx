@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -29,15 +30,22 @@ import {
   Bus,
   ShoppingBag,
   Wallet,
+  Check,
+  ChevronDown,
+  X,
   type LucideIcon,
 } from "lucide-react-native";
 import { useFinance } from "@/lib/store";
 import { shiftMonth } from "@/lib/core";
+import { themeColors } from "@/lib/theme";
+import { NeonBackground } from "./neon-background";
 import {
   creditStatus,
   dateLabel,
   money,
   monthLabel,
+  normalize,
+  type Budget,
   type Entry,
   type SharedEntry,
 } from "@/lib/finance";
@@ -45,22 +53,7 @@ import {
 export function useColors() {
   const { theme } = useFinance();
   const system = useColorScheme();
-  const dark = theme === "dark" || (theme === "auto" && system === "dark");
-  return {
-    dark,
-    bg: dark ? "#171f25" : "#f9faf6",
-    surface: dark ? "#253139" : "#ffffff",
-    ink: dark ? "#edf3f1" : "#25394a",
-    muted: dark ? "#b4c5c0" : "#63746f",
-    line: dark ? "#3d4b53" : "#e0e6df",
-    primary: dark ? "#bfa4ec" : "#7254ad",
-    lilac: dark ? "#3c304e" : "#eee5f8",
-    mint: dark ? "#25483f" : "#def3ec",
-    green: dark ? "#8dd6c1" : "#367267",
-    red: dark ? "#ffa3ad" : "#b64350",
-    cream: dark ? "#4a422c" : "#fff7d6",
-    peach: dark ? "#4d3434" : "#fae8e1",
-  };
+  return themeColors(theme, system);
 }
 export function Brand() {
   const c = useColors();
@@ -73,7 +66,7 @@ export function Brand() {
         color: c.dark ? c.ink : "#284f4b",
       }}
     >
-      Uang<Text style={{ color: c.green }}>Kita</Text>
+      Uang<Text style={{ color: c.neon ? "#22d3ee" : c.green }}>Kita</Text>
     </Text>
   );
 }
@@ -142,6 +135,7 @@ export function Button({
   danger = false,
   disabled = false,
   compact = false,
+  icon: Icon,
 }: {
   title: string;
   onPress: () => void;
@@ -149,6 +143,7 @@ export function Button({
   danger?: boolean;
   disabled?: boolean;
   compact?: boolean;
+  icon?: LucideIcon;
 }) {
   const c = useColors();
   return (
@@ -169,8 +164,28 @@ export function Button({
         opacity: disabled ? 0.45 : pressed ? 0.7 : 1,
         alignItems: "center",
         justifyContent: "center",
+        flexDirection: "row",
+        gap: 9,
+        overflow: "hidden",
       })}
     >
+      {c.neon && !secondary && !danger && <NeonBackground variant="button" />}
+      {Icon && (
+        <Icon
+          size={19}
+          color={
+            danger
+              ? c.red
+              : secondary
+                ? c.primary
+                : c.neon
+                  ? "#fff"
+                  : c.dark
+                    ? "#231934"
+                    : "#fff"
+          }
+        />
+      )}
       <Text
         style={{
           fontSize: 14,
@@ -179,9 +194,11 @@ export function Button({
             ? c.red
             : secondary
               ? c.ink
-              : c.dark
-                ? "#231934"
-                : "#fff",
+              : c.neon
+                ? "#fff"
+                : c.dark
+                  ? "#231934"
+                  : "#fff",
         }}
       >
         {title}
@@ -207,26 +224,256 @@ export function Card({
   title,
   children,
   tone,
+  icon: Icon,
+  testID,
 }: {
   title?: string;
   children: ReactNode;
   tone?: "mint" | "lilac";
+  icon?: LucideIcon;
+  testID?: string;
 }) {
   const c = useColors();
   return (
     <View
+      testID={testID}
       style={{
-        backgroundColor: tone ? c[tone] : c.surface,
-        borderRadius: 17,
-        padding: 18,
-        gap: 12,
+        backgroundColor: tone ? (c.neon ? c.lilac : c[tone]) : c.surface,
+        borderRadius: 20,
+        padding: 20,
+        gap: 16,
         borderWidth: 1,
-        borderColor: c.line,
+        borderColor: c.neon && tone ? "#a78bfa55" : c.line,
+        overflow: "hidden",
+        boxShadow: c.neon
+          ? "0 8px 24px #00000030, 0 0 20px #8b5cf612"
+          : undefined,
       }}
     >
-      {title && <Txt bold>{title}</Txt>}
+      {c.neon && <NeonBackground />}
+      {title && (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          {Icon && <Icon size={20} color={c.primary} />}
+          <View style={{ flex: 1 }}>
+            <Txt bold>{title}</Txt>
+          </View>
+        </View>
+      )}
       {children}
     </View>
+  );
+}
+export function MenuRow({
+  icon: Icon,
+  title,
+  description,
+  onPress,
+  disabled = false,
+  danger = false,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  onPress: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  const c = useColors();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityHint={description}
+      disabled={disabled}
+      accessibilityState={{ disabled }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
+        minHeight: 68,
+        paddingVertical: 10,
+        opacity: disabled ? 0.45 : pressed ? 0.65 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 14,
+          backgroundColor: danger ? c.peach : c.lilac,
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: c.neon ? 1 : 0,
+          borderColor: c.line,
+        }}
+      >
+        <Icon size={21} color={danger ? c.red : c.primary} />
+      </View>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Txt bold color={danger ? c.red : c.ink}>
+          {title}
+        </Txt>
+        <Text style={{ color: c.muted, fontSize: 12, lineHeight: 18 }}>
+          {description}
+        </Text>
+      </View>
+      <ChevronRight size={18} color={c.muted} />
+    </Pressable>
+  );
+}
+export function ChoicePicker({
+  label,
+  value,
+  options,
+  onChange,
+  searchable = false,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+  searchable?: boolean;
+  disabled?: boolean;
+}) {
+  const c = useColors();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const filtered = options.filter((option) =>
+    normalize(option.label).includes(normalize(query)),
+  );
+  const selected =
+    options.find((option) => option.value === value)?.label ??
+    (value || undefined) ??
+    options[0]?.label;
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${selected}`}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        onPress={() => {
+          setQuery("");
+          setOpen(true);
+        }}
+        style={{
+          flex: 1,
+          minWidth: 130,
+          minHeight: 62,
+          padding: 13,
+          borderWidth: 1,
+          borderColor: c.line,
+          borderRadius: 14,
+          backgroundColor: c.surface,
+          gap: 5,
+        }}
+      >
+        <Text style={{ color: c.muted, fontSize: 11 }}>{label}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Txt bold>{selected}</Txt>
+          </View>
+          <ChevronDown size={17} color={c.primary} />
+        </View>
+      </Pressable>
+      <Modal
+        visible={open}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{
+            flex: 1,
+            justifyContent: "flex-end",
+            backgroundColor: "#06081099",
+          }}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tutup pilihan"
+            onPress={() => setOpen(false)}
+            style={StyleSheet.absoluteFill}
+          />
+          <SafeAreaView
+            edges={["bottom"]}
+            accessibilityViewIsModal
+            style={{
+              backgroundColor: c.surface,
+              padding: 20,
+              gap: 16,
+              maxHeight: "85%",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Txt bold>Pilih {label.toLowerCase()}</Txt>
+              <IconButton
+                icon={X}
+                label="Tutup pilihan"
+                onPress={() => setOpen(false)}
+              />
+            </View>
+            {searchable && (
+              <Field
+                label={`Cari ${label.toLowerCase()}`}
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Ketik untuk mencari"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            )}
+            <ScrollView
+              style={{ flexGrow: 0 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {!filtered.length && <Txt muted>Tidak ada pilihan yang cocok.</Txt>}
+              {filtered.map((option) => (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: value === option.value }}
+                  accessibilityLabel={option.label}
+                  onPress={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    padding: 16,
+                    minHeight: 52,
+                    borderRadius: 12,
+                    backgroundColor:
+                      value === option.value ? c.lilac : "transparent",
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Txt>{option.label}</Txt>
+                  </View>
+                  {value === option.value && (
+                    <Check size={20} color={c.primary} />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
+    </>
   );
 }
 export function Metric({
@@ -261,6 +508,22 @@ export function Metric({
       >
         {hidden ? "••••••" : money(value)}
       </Text>
+    </View>
+  );
+}
+export function DailyFoodAllowance({ budget }: { budget: Budget }) {
+  const allowance = budget.dailyFoodAllowance;
+  if (!allowance) return null;
+  return (
+    <View style={{ gap: 8 }}>
+      <Metric label="Jatah makan per hari" value={allowance.daily} />
+      <Txt muted>
+        {allowance.cashLimited
+          ? "Sisa uang saat ini lebih kecil dari sisa anggaran makan, jadi jatah mengikuti uang yang tersedia."
+          : "Jatah dihitung dari sisa anggaran makan."}{" "}
+        Dibagi {allowance.days} hari sampai akhir bulan
+        {allowance.includesToday ? ", termasuk hari ini" : ""}.
+      </Txt>
     </View>
   );
 }
@@ -402,6 +665,7 @@ export function DateField({
 }
 export function MonthPicker() {
   const { month, setMonth } = useFinance();
+  const c = useColors();
   return (
     <View
       style={{
@@ -409,9 +673,9 @@ export function MonthPicker() {
         alignItems: "center",
         justifyContent: "space-between",
         gap: 8,
-        backgroundColor: "#ffffff40",
+        backgroundColor: c.neon ? c.surface : "#ffffff40",
         borderWidth: 1,
-        borderColor: "#9bbcaf55",
+        borderColor: c.neon ? c.line : "#9bbcaf55",
         borderRadius: 10,
       }}
     >
@@ -441,13 +705,11 @@ const tabs = [
 export function Page({
   children,
   period = true,
-  tabs: showTabs = true,
   refresh,
   header,
 }: {
   children: ReactNode;
   period?: boolean;
-  tabs?: boolean;
   refresh?: () => Promise<void>;
   header?: ReactNode;
 }) {
@@ -470,12 +732,17 @@ export function Page({
   return (
     <SafeAreaView
       edges={
-        path === "/login" || path === "/"
+        path === "/login"
           ? ["top", "bottom", "left", "right"]
-          : ["bottom", "left", "right"]
+          : path === "/"
+            ? ["top", "left", "right"]
+            : path === "/form"
+              ? ["bottom", "left", "right"]
+              : ["left", "right"]
       }
       style={{ flex: 1, backgroundColor: c.bg }}
     >
+      {c.neon && <NeonBackground variant="page" />}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -507,18 +774,15 @@ export function Page({
                 marginHorizontal: -20,
                 padding: 22,
                 gap: 20,
-                backgroundColor: c.mint,
+                backgroundColor: c.neon ? c.lilac : c.mint,
                 borderBottomLeftRadius: 28,
                 borderBottomRightRadius: 28,
+                overflow: "hidden",
               }}
             >
+              {c.neon && <NeonBackground />}
               {header}
             </View>
-          )}
-          {store.demo && (
-            <Text style={{ color: c.primary, fontSize: 12, fontWeight: "700" }}>
-              MODE DEMO · data contoh tersimpan di perangkat
-            </Text>
           )}
           {period && !header && <MonthPicker />}
           {store.error !== "" && (
@@ -535,67 +799,97 @@ export function Page({
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
-      {showTabs && (
-        <View
-          style={{
-            flexDirection: "row",
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            backgroundColor: "#7254ad",
-          }}
-        >
-          {tabs.map(([href, Icon, label]) => (
-            <Pressable
-              key={href}
-              accessibilityRole="button"
-              accessibilityLabel={label}
-              accessibilityState={{ selected: path === href }}
-              onPress={() => {
-                if (path !== href) router.push(href as Href);
-              }}
-              style={({ pressed }) => ({
-                flex: 1,
-                paddingVertical: 10,
+    </SafeAreaView>
+  );
+}
+export function BottomNav() {
+  const c = useColors();
+  const path = usePathname();
+  return (
+    <SafeAreaView
+      testID="bottom-nav"
+      edges={["bottom", "left", "right"]}
+      style={{ backgroundColor: c.bg }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          backgroundColor: c.neon ? c.surface : "#7254ad",
+          borderTopWidth: c.neon ? 1 : 0,
+          borderTopColor: c.primary,
+        }}
+      >
+        {tabs.map(([href, Icon, label]) => (
+          <Pressable
+            key={href}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            accessibilityState={{ selected: path === href }}
+            onPress={() => {
+              if (path !== href) router.push(href as Href);
+            }}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: 10,
+              alignItems: "center",
+              gap: 3,
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <View
+              style={{
+                width: label === "Catat" ? 48 : 32,
+                height: label === "Catat" ? 48 : 27,
                 alignItems: "center",
-                gap: 3,
-                opacity: pressed ? 0.6 : 1,
-              })}
+                justifyContent: "center",
+                borderRadius: 26,
+                marginTop: label === "Catat" ? -24 : 0,
+                borderWidth: label === "Catat" ? 3 : 0,
+                borderColor: c.mint,
+                backgroundColor:
+                  label === "Catat"
+                    ? c.neon
+                      ? c.primary
+                      : "#9b81c7"
+                    : "transparent",
+              }}
             >
-              <View
-                style={{
-                  width: label === "Catat" ? 48 : 32,
-                  height: label === "Catat" ? 48 : 27,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 26,
-                  marginTop: label === "Catat" ? -24 : 0,
-                  borderWidth: label === "Catat" ? 3 : 0,
-                  borderColor: c.mint,
-                  backgroundColor:
-                    label === "Catat" ? "#9b81c7" : "transparent",
-                }}
-              >
-                <Icon
-                  size={label === "Catat" ? 26 : 21}
-                  strokeWidth={1.7}
-                  color={
-                    path === href || label === "Catat" ? "#fff" : "#e2d7f2"
-                  }
-                />
-              </View>
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: path === href ? "#fff" : "#e2d7f2",
-                  fontWeight: path === href ? "700" : "400",
-                }}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+              <Icon
+                size={label === "Catat" ? 26 : 21}
+                strokeWidth={1.7}
+                color={
+                  c.neon
+                    ? label === "Catat"
+                      ? c.bg
+                      : path === href
+                        ? c.primary
+                        : c.muted
+                    : path === href || label === "Catat"
+                      ? "#fff"
+                      : "#e2d7f2"
+                }
+              />
+            </View>
+            <Text
+              style={{
+                fontSize: 10,
+                color: c.neon
+                  ? path === href
+                    ? c.primary
+                    : c.muted
+                  : path === href
+                    ? "#fff"
+                    : "#e2d7f2",
+                fontWeight: path === href ? "700" : "400",
+              }}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
     </SafeAreaView>
   );
 }
@@ -627,7 +921,7 @@ export function Transactions({
         paddingHorizontal: 14,
       }}
     >
-      {entries.slice(0, count).map((e) => (
+      {entries.slice(0, count).map((e, index) => (
         <Pressable
           key={e.id}
           accessibilityRole="button"
@@ -640,7 +934,11 @@ export function Transactions({
           }
           style={({ pressed }) => ({
             backgroundColor: c.surface,
-            borderBottomWidth: 1,
+            borderBottomWidth:
+              index < Math.min(count, entries.length) - 1 ||
+              entries.length > count
+                ? 1
+                : 0,
             borderColor: c.line,
             paddingVertical: 15,
             opacity: pressed || !e.active ? 0.6 : 1,
@@ -710,11 +1008,13 @@ export function Transactions({
         </Pressable>
       ))}
       {entries.length > count && (
-        <Button
-          secondary
-          title={`Lihat ${Math.min(30, entries.length - count)} lainnya`}
-          onPress={() => setCount(count + 30)}
-        />
+        <View style={{ paddingVertical: 16 }}>
+          <Button
+            secondary
+            title={`Lihat ${Math.min(30, entries.length - count)} lainnya`}
+            onPress={() => setCount(count + 30)}
+          />
+        </View>
       )}
     </View>
   );

@@ -87,6 +87,21 @@ Nominal berupa integer rupiah, maksimal Rp1 triliun per catatan. Tanggal divalid
 - Impor menerima format backup aplikasi Next.js versi 1. Cadangan/localStorage HTML lama belum diimpor otomatis; data HTML tetap utuh.
 - Login belum mencakup antarmuka reset password. Kebijakan verifikasi email dan Google diatur pada Neon Auth.
 
+## API untuk mobile dan web
+
+| Endpoint | Kebutuhan |
+| --- | --- |
+| `/api/auth/*` | Sesi, masuk/daftar email, Google, verifikasi email, dan keluar melalui Neon Auth |
+| `/api/mobile-auth/callback` | Mengembalikan hasil login Google ke aplikasi mobile |
+| `/api/finance` GET | Catatan, anggaran, pendapatan, target tabungan, tagihan berulang, kategori, dan jatah makan harian |
+| `/api/finance` POST | Simpan/edit/hapus catatan dan anggaran, pendapatan, kategori, target, tagihan, impor, dan reset |
+| `/api/spaces` GET/POST | Ruang bersama, anggota, undangan, dan pengelolaan ruang |
+| `/api/spaces/:id/finance` GET/POST | Catatan, anggaran, dan kategori ruang sesuai izin anggota |
+
+Respons keuangan pribadi menyertakan `availableCategories` untuk form, `activityCategories` untuk filter termasuk transfer ruang, dan `budgets[].dailyFoodAllowance`. API menghitung jatah makan/minum dari nilai terkecil antara sisa anggaran dan saldo bulan tersebut, dibagi sisa hari kalender termasuk hari ini. Bulan mendatang memakai seluruh hari bulan; bulan lalu tidak menampilkan jatah harian. Mobile hanya menampilkan hasil API.
+
+API memakai nama kategori yang sudah ada untuk variasi huruf besar/kecil dan spasi tepi, memeriksa anggaran duplikat serta batas penarikan tabungan. Web juga menyediakan jatah harian, filter kategori/kredit/setoran/penarikan, status aktif transaksi, serta tema otomatis/terang/gelap/neon. Mobile memakai login dan API; tidak memiliki mode demo. `/api/finance/preview` hanya menghitung snapshot demo web yang tervalidasi tanpa membaca atau menulis akun.
+
 ## Pemeriksaan
 
 ```sh

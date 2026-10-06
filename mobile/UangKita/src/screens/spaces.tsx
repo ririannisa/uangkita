@@ -1,8 +1,11 @@
 import { useCallback, useRef, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { ChartPie, ReceiptText, Target, UsersRound } from "lucide-react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   Button,
   Card,
+  ChoicePicker,
   Field,
   Metric,
   Page,
@@ -11,7 +14,9 @@ import {
   Transactions,
   Txt,
   confirm,
+  useColors,
 } from "@/components/finance-ui";
+import { filterActivity } from "@/lib/analytics";
 import { api } from "@/lib/api";
 import { useFinance } from "@/lib/store";
 import { useSpace } from "@/lib/shared";
@@ -20,20 +25,21 @@ import {
   money,
   sharedFigures,
   sharedRealization,
+  categoryOptions,
   type SpaceAction,
 } from "@/lib/finance";
 
 export function SpacesScreen() {
   const store = useFinance();
-  const { demo, loadSpaces, setError } = store;
+  const { loadSpaces, setError } = store;
   const [name, setName] = useState("");
   const [kind, setKind] = useState<"couple" | "family">("couple");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      if (!demo) loadSpaces().catch((e) => setError(e.message));
-    }, [demo, loadSpaces, setError]),
+      loadSpaces().catch((e) => setError(e.message));
+    }, [loadSpaces, setError]),
   );
   async function act(action: SpaceAction) {
     if (pending.current) return;
@@ -50,21 +56,6 @@ export function SpacesScreen() {
       setBusy(false);
     }
   }
-  if (store.demo)
-    return (
-      <Page period={false}>
-        <Card title="Ruang bersama">
-          <Txt>
-            Kelola uang pasangan atau keluarga, lengkap dengan kontribusi,
-            anggaran, dan riwayat anggota.
-          </Txt>
-          <Txt muted>
-            Masuk dengan akunmu untuk memakai ruang bersama. Mode demo memakai
-            data pribadi di perangkat.
-          </Txt>
-        </Card>
-      </Page>
-    );
   return (
     <Page period={false} refresh={store.loadSpaces}>
       <Txt large>Uang bersama,{"\n"}rencana bersama.</Txt>
@@ -143,7 +134,11 @@ export function SpaceScreen() {
     mode?: string;
   }>();
   const store = useFinance();
+  const c = useColors();
   const shared = useSpace(scope);
+  const [activityType, setActivityType] = useState("all");
+  const [activityCategory, setActivityCategory] = useState("");
+  const [activityQuery, setActivityQuery] = useState("");
   const [email, setEmail] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [category, setCategory] = useState("");
@@ -190,28 +185,57 @@ export function SpaceScreen() {
   return (
     <Page refresh={shared.reload}>
       <Txt large>{space?.name || "Ruang bersama"}</Txt>
-      <Row>
-        {[
-          ["summary", "Ringkasan"],
-          ["activity", "Aktivitas ruang"],
-          ["budget", "Anggaran ruang"],
-          ["members", "Anggota"],
-        ].map(([value, label]) => (
-          <Button
-            compact
+      <Txt muted>
+        {space?.kind === "couple" ? "Dompet pasangan" : "Dompet keluarga"} ·{" "}
+        {details.members.length} anggota
+      </Txt>
+      <View
+        accessibilityRole="tablist"
+        style={{
+          flexDirection: "row",
+          borderBottomWidth: 1,
+          borderColor: c.line,
+        }}
+      >
+        {(
+          [
+            ["summary", "Ringkasan", ChartPie],
+            ["activity", "Aktivitas", ReceiptText],
+            ["budget", "Anggaran", Target],
+            ["members", "Anggota", UsersRound],
+          ] as const
+        ).map(([value, label, Icon]) => (
+          <Pressable
             key={value}
-            title={label}
-            secondary={mode !== value}
+            accessibilityRole="tab"
+            accessibilityLabel={label + " ruang"}
+            accessibilityState={{ selected: mode === value }}
             onPress={() => {
-              if (mode !== value)
-                router.push({
-                  pathname: "/space",
-                  params: { scope, mode: value },
-                });
+              if (mode !== value) router.setParams({ mode: value });
             }}
-          />
+            style={{
+              flex: 1,
+              alignItems: "center",
+              gap: 7,
+              paddingVertical: 14,
+              minHeight: 66,
+              borderBottomWidth: 3,
+              borderColor: mode === value ? c.primary : "transparent",
+            }}
+          >
+            <Icon size={20} color={mode === value ? c.primary : c.muted} />
+            <Text
+              style={{
+                fontSize: 11,
+                color: mode === value ? c.primary : c.muted,
+                fontWeight: mode === value ? "700" : "400",
+              }}
+            >
+              {label}
+            </Text>
+          </Pressable>
         ))}
-      </Row>
+      </View>
       {shared.error !== "" && <Txt>{shared.error}</Txt>}
       {mode === "summary" && (
         <>
@@ -259,6 +283,52 @@ export function SpaceScreen() {
       )}
       {mode === "activity" && (
         <>
+          <Card title="Filter aktivitas ruang" icon={ReceiptText}>
+            <Field
+              label="Cari transaksi ruang"
+              value={activityQuery}
+              onChangeText={setActivityQuery}
+              placeholder="Cari catatan"
+            />
+            <Row>
+              <ChoicePicker
+                label="Jenis transaksi ruang"
+                value={activityType}
+                onChange={setActivityType}
+                options={[
+                  { value: "all", label: "Semua" },
+                  { value: "contribution", label: "Kontribusi" },
+                  { value: "out", label: "Pengeluaran" },
+                  { value: "credit", label: "Kredit" },
+                ]}
+              />
+              <ChoicePicker
+                label="Kategori ruang"
+                value={activityCategory}
+                onChange={setActivityCategory}
+                options={[
+                  { value: "", label: "Semua kategori" },
+                  ...(finance.availableCategories ?? categoryOptions(finance)).map((name) => ({
+                    value: name,
+                    label: name,
+                  })),
+                ]}
+              />
+            </Row>
+            {(activityType !== "all" ||
+              !!activityCategory ||
+              !!activityQuery) && (
+              <Button
+                secondary
+                title="Reset filter ruang"
+                onPress={() => {
+                  setActivityType("all");
+                  setActivityCategory("");
+                  setActivityQuery("");
+                }}
+              />
+            )}
+          </Card>
           <Button
             title="＋ Catat transaksi ruang"
             onPress={() =>
@@ -269,9 +339,14 @@ export function SpaceScreen() {
             }
           />
           <Transactions
-            entries={finance.entries
-              .filter((e) => inActivityMonth(e, store.month))
-              .sort((a, b) => b.date.localeCompare(a.date))}
+            key={store.month + activityType + activityCategory + activityQuery}
+            entries={filterActivity(
+              finance.entries,
+              store.month,
+              activityType,
+              activityCategory,
+              activityQuery,
+            )}
             scope={scope}
           />
         </>

@@ -3,6 +3,8 @@ import { test } from "node:test";
 import { categoryNameSchema, categoryOptions } from "../lib/categories";
 import {
   backupSchema,
+  applyMutation,
+  canonicalMutation,
   entrySchema,
   figures,
   creditFigures,
@@ -15,8 +17,65 @@ import {
   mutationSchema,
   inActivityMonth,
   realization,
+  withFinanceDetails,
   type FinanceData,
 } from "../lib/finance";
+
+test("finance API data includes daily food allowances computed from account data", () => {
+  const data: FinanceData = {
+    entries: [],
+    categories: ["Zakat"],
+    plans: [{ month: "2026-10", income: 520000 }],
+    budgets: [
+      { id: "00000000-0000-4000-8000-000000000001", month: "2026-10", name: "Makan & minum", planned: 780000 },
+      { id: "00000000-0000-4000-8000-000000000002", month: "2026-10", name: "Transportasi", planned: 100000 },
+      { id: "00000000-0000-4000-8000-000000000003", month: "2026-09", name: "Makan & minum", planned: 780000 },
+    ],
+  };
+  const response = withFinanceDetails(data, "2026-10-06");
+  assert.ok(response.availableCategories?.includes("Zakat"));
+  assert.ok(response.availableCategories?.includes("Makan & minum"));
+  const withTransfer = withFinanceDetails({ ...data, entries: [{
+    id: "shared:transfer", type: "out", amount: 10000, category: "Ruang Bersama", note: "Transfer", date: "2026-10-06", active: true, spaceId: "room",
+  }] }, "2026-10-06");
+  assert.ok(withTransfer.activityCategories?.includes("Ruang Bersama"));
+  assert.equal(withTransfer.availableCategories?.includes("Ruang Bersama"), false);
+  assert.deepEqual(response.budgets[0].dailyFoodAllowance, {
+    days: 26, daily: 20000, cashLimited: true, includesToday: true,
+  });
+  assert.equal(response.budgets[1].dailyFoodAllowance, null);
+  assert.equal(response.budgets[2].dailyFoodAllowance, null);
+  assert.equal(data.budgets[0].dailyFoodAllowance, undefined);
+  assert.equal("dailyFoodAllowance" in backupSchema.parse({ ...response, version: 1 }).budgets[0], false);
+  const nextMonth = withFinanceDetails(response, "2026-11-01");
+  assert.equal(nextMonth.budgets[0].dailyFoodAllowance, null);
+});
+
+test("server mutations reuse stored categories and reject excess withdrawals and duplicate budgets", () => {
+  const data: FinanceData = {
+    categories: ["Zakat"],
+    plans: [],
+    budgets: [{ id: crypto.randomUUID(), month: "2026-10", name: "Zakat", planned: 500000 }],
+    entries: [{ id: crypto.randomUUID(), type: "deposit", category: "Tabungan", amount: 200000, date: "2026-10-01", note: "", active: true }],
+  };
+  const names = withFinanceDetails(data).availableCategories!;
+  const entry = canonicalMutation(mutationSchema.parse({
+    action: "entry", entry: { id: crypto.randomUUID(), type: "out", category: " zakat ", amount: 100000, date: "2026-10-06", note: "", active: true },
+  }), names);
+  assert.ok(entry.action === "entry");
+  assert.equal(entry.entry.category, "Zakat");
+  assert.deepEqual(canonicalMutation({ action: "category", name: " ZAKAT " }, names), { action: "category", name: "Zakat" });
+  const budget = canonicalMutation({ action: "budget", budget: { ...data.budgets[0], id: crypto.randomUUID(), name: " zakat " } }, names);
+  assert.throws(() => applyMutation(data, budget), { message: /sudah memiliki anggaran/, status: 409 });
+  const withdraw = { ...data.entries[0], id: crypto.randomUUID(), type: "withdraw" as const, amount: 200001 };
+  assert.throws(() => applyMutation(data, { action: "entry", entry: withdraw }), /melebihi total tabungan/);
+  assert.equal(figures(applyMutation(data, { action: "entry", entry: { ...withdraw, amount: 200000 } }), "2026-10").savings, 0);
+  const recurring = canonicalMutation({ action: "recurringBill", bill: {
+    id: crypto.randomUUID(), name: "Zakat rutin", category: " zakat ", amount: 100000, day: 1, startMonth: "2026-10", active: true,
+  } }, names);
+  assert.ok(recurring.action === "recurringBill");
+  assert.equal(recurring.bill.category, "Zakat");
+});
 
 test("credit health assesses monthly obligations, overdue dates, and cash without double counting", () => {
   const credit = {

@@ -1,6 +1,6 @@
 import { getAuth, authConfigured } from "@/lib/auth/server";
 import { getSql, readFinance } from "@/lib/db";
-import { mutationSchema } from "@/lib/finance";
+import { applyMutation, canonicalMutation, mutationSchema } from "@/lib/finance";
 
 async function userId() {
   if (!authConfigured()) return null;
@@ -64,7 +64,20 @@ export async function POST(request: Request) {
         { error: parsed.error.issues[0]?.message ?? "Data tidak valid." },
         { status: 400 },
       );
-    const action = parsed.data;
+    let action = parsed.data;
+    if (["entry", "budget", "category", "recurringBill"].includes(action.action)) {
+      const current = await readFinance(id);
+      action = canonicalMutation(action, current.availableCategories ?? []);
+      try {
+        // ponytail: validation uses a snapshot; serialize account writes if simultaneous edits must be coordinated.
+        applyMutation(current, action);
+      } catch (error) {
+        return Response.json(
+          { error: error instanceof Error ? error.message : "Data tidak valid." },
+          { status: error instanceof Error && "status" in error && error.status === 409 ? 409 : 400 },
+        );
+      }
+    }
     const sql = getSql();
     if (action.action === "category") {
       await sql`INSERT INTO dompetku.personal_categories(user_id,name) VALUES(${id},${action.name}) ON CONFLICT DO NOTHING`;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getSql } from "@/lib/db";
 import { sharedMutationSchema } from "@/lib/shared-finance";
+import { existingCategory } from "@/lib/categories";
 import {
   assertSameOrigin,
   getSpaceUser,
@@ -46,6 +47,13 @@ export async function POST(request: Request, ctx: Context) {
       );
     const a = parsed.data,
       sql = getSql();
+    if (a.action !== "delete") {
+      const finance = await readSharedFinance(space.id, user.id);
+      const names = finance.availableCategories ?? [];
+      if (a.action === "entry") a.entry.category = existingCategory(a.entry.category, names);
+      else if (a.action === "budget") a.budget.name = existingCategory(a.budget.name, names);
+      else a.name = existingCategory(a.name, names);
+    }
     let rows;
     if (a.action === "category") {
       if (space.role !== "owner")

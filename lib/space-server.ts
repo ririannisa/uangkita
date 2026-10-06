@@ -1,6 +1,7 @@
 import "server-only";
 import { getAuth, authConfigured } from "./auth/server";
 import { getSql } from "./db";
+import { categoryOptions } from "./categories";
 import type { SharedFinance } from "./shared-finance";
 import type { Space, SpaceDetails, SpaceOverview, SpaceUser } from "./spaces";
 
@@ -99,9 +100,10 @@ export async function readSharedFinance(
   ]);
   const names =
     await sql`SELECT c.name FROM dompetku.shared_categories c WHERE c.space_id=${spaceId} AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id=c.space_id AND m.user_id=${userId}) ORDER BY c.name`;
-  return {
+  const data = {
     entries,
     budgets,
     categories: names.map((c) => c.name),
   } as SharedFinance;
+  return { ...data, availableCategories: categoryOptions(data) };
 }

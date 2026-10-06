@@ -1185,6 +1185,39 @@ label .muted {
   box-shadow: none;
   padding: 14px 0;
 }
+.activity-category-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 16px 0;
+}
+.activity-category-filter label {
+  flex: 1;
+  min-width: 150px;
+  display: grid;
+  gap: 8px;
+}
+.activity-category-filter :is(input, select), .theme-setting select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.theme-setting {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+.daily-food-allowance {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
 .filter-tabs {
   display: flex;
   gap: 8px;
@@ -1973,15 +2006,15 @@ label .muted {
 .theme-sun {
   display: none;
 }
-[data-theme="dark"] .theme-moon {
+:is([data-theme="dark"], [data-theme="neon"]) .theme-moon {
   display: none;
 }
-[data-theme="dark"] .theme-sun {
+:is([data-theme="dark"], [data-theme="neon"]) .theme-sun {
   display: block;
 }
 
 /* Holographic glass from dompetku, with a purple neon accent. */
-:root[data-theme="dark"] {
+:root:is([data-theme="dark"], [data-theme="neon"]) {
   color-scheme: dark;
   --bg: #060810;
   --surface: #10131f;
@@ -2002,26 +2035,26 @@ label .muted {
   --shadow: 0 12px 36px #00000040, 0 0 24px #8b5cf612;
   --grad-holo: linear-gradient(120deg, #7c3aed, #a855f7 52%, #22d3ee);
 }
-[data-theme="dark"] body {
+:is([data-theme="dark"], [data-theme="neon"]) body {
   background-image:
     radial-gradient(ellipse at 10% 0%, #8b5cf62e, transparent 45%),
     radial-gradient(ellipse at 95% 35%, #a855f71f, transparent 45%),
     radial-gradient(ellipse at 10% 100%, #22d3ee12, transparent 40%);
   background-attachment: fixed;
 }
-[data-theme="dark"] :is(.app-shell, .app-header) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.app-shell, .app-header) {
   background: transparent;
 }
-[data-theme="dark"] :is(.desktop-sidebar, .bottom-nav) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.desktop-sidebar, .bottom-nav) {
   background: #0a0c14d9;
   backdrop-filter: blur(18px);
   border-color: var(--line);
 }
-[data-theme="dark"] .app-header.home-header {
+:is([data-theme="dark"], [data-theme="neon"]) .app-header.home-header {
   background: linear-gradient(160deg, #8b5cf61f, #a855f710 55%, #22d3ee0d);
   border-bottom: 1px solid var(--line);
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(
     .panel,
     .budget-card,
@@ -2035,7 +2068,7 @@ label .muted {
   box-shadow: var(--shadow);
   backdrop-filter: blur(10px);
 }
-[data-theme="dark"] :is(.balance-card, .savings-card, .shared-balance) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.balance-card, .savings-card, .shared-balance) {
   background: linear-gradient(160deg, #8b5cf629, #a855f719 55%, #22d3ee14);
   border-color: #a78bfa55;
   box-shadow:
@@ -2043,14 +2076,14 @@ label .muted {
     inset 0 1px 0 #ffffff14;
   backdrop-filter: blur(14px);
 }
-[data-theme="dark"] .balance-card-top {
+:is([data-theme="dark"], [data-theme="neon"]) .balance-card-top {
   background: #8b5cf61f;
   border-bottom: 1px solid var(--line);
 }
-[data-theme="dark"] :is(.brand span, .login-story > .brand span) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.brand span, .login-story > .brand span) {
   color: var(--cyan);
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(
     .sidebar-caption,
     .page-footer,
@@ -2065,7 +2098,7 @@ label .muted {
   ) {
   color: var(--muted);
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(
     .period,
     .secondary,
@@ -2081,31 +2114,31 @@ label .muted {
   border-color: var(--line);
   color: var(--ink);
 }
-[data-theme="dark"] :is(.entry-dialog, .space-manager) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.entry-dialog, .space-manager) {
   background: var(--surface);
   border: 1px solid #a78bfa40;
   box-shadow: var(--shadow);
 }
-[data-theme="dark"] .entry-dialog::backdrop {
+:is([data-theme="dark"], [data-theme="neon"]) .entry-dialog::backdrop {
   background: #060810b3;
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(.entry-dialog, .space-manager, .shared-room)
   select.app-select {
   background-color: var(--surface);
   border-color: var(--line);
   color: var(--ink);
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(.entry-dialog, .space-manager, .shared-room)
   select.app-select:hover:not(:disabled) {
   background-color: #1d1730;
   border-color: var(--primary);
 }
-[data-theme="dark"] :is(.search-field input, .amount-input input) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.search-field input, .amount-input input) {
   background: transparent;
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(
     .primary,
     .filter-tabs button.active,
@@ -2117,25 +2150,25 @@ label .muted {
   color: white;
   box-shadow: 0 4px 16px #8b5cf633;
 }
-[data-theme="dark"] .primary:hover:not(:disabled) {
+:is([data-theme="dark"], [data-theme="neon"]) .primary:hover:not(:disabled) {
   background: linear-gradient(120deg, #7c3aed, #a13cef);
 }
-[data-theme="dark"] :is(.theme-toggle, .avatar, .quick-icon, .category-icon) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.theme-toggle, .avatar, .quick-icon, .category-icon) {
   border: 1px solid #a78bfa33;
   box-shadow: 0 0 18px #8b5cf61a;
 }
-[data-theme="dark"] .theme-toggle {
+:is([data-theme="dark"], [data-theme="neon"]) .theme-toggle {
   color: var(--cyan);
 }
-[data-theme="dark"] .quick-icon {
+:is([data-theme="dark"], [data-theme="neon"]) .quick-icon {
   border-width: 1px;
 }
-[data-theme="dark"] :is(.sky, .badge.warning, .notice, .demo-banner) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.sky, .badge.warning, .notice, .demo-banner) {
   background: var(--cream);
   color: #f5c463;
   border-color: #f5c46333;
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(
     .peach,
     .badge.danger,
@@ -2147,42 +2180,42 @@ label .muted {
   color: var(--red);
   border-color: #fb718533;
 }
-[data-theme="dark"] :is(.badge.safe, .feedback) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.badge.safe, .feedback) {
   background: #34d39914;
   color: var(--green);
   border-color: #34d39933;
 }
-[data-theme="dark"] .insight-banner.has-alert {
+:is([data-theme="dark"], [data-theme="neon"]) .insight-banner.has-alert {
   background: linear-gradient(150deg, #f5c4631f, #f5c46308);
   border-color: #f5c4634d;
 }
-[data-theme="dark"] .has-alert .insight-icon {
+:is([data-theme="dark"], [data-theme="neon"]) .has-alert .insight-icon {
   color: #f5c463;
 }
-[data-theme="dark"] :is(.insight-icon, .savings-art) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.insight-icon, .savings-art) {
   background: #ffffff0d;
 }
-[data-theme="dark"] :is(.saving-teaser, .shared-balance) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.saving-teaser, .shared-balance) {
   border-color: #a78bfa33;
 }
-[data-theme="dark"] :is(.progress-track, .shared-budget progress),
-[data-theme="dark"] .shared-budget progress::-webkit-progress-bar {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.progress-track, .shared-budget progress),
+:is([data-theme="dark"], [data-theme="neon"]) .shared-budget progress::-webkit-progress-bar {
   background: #ffffff0d;
 }
-[data-theme="dark"] .progress-track > span,
-[data-theme="dark"] .shared-budget progress::-webkit-progress-value {
+:is([data-theme="dark"], [data-theme="neon"]) .progress-track > span,
+:is([data-theme="dark"], [data-theme="neon"]) .shared-budget progress::-webkit-progress-value {
   background: var(--grad-holo);
 }
-[data-theme="dark"] .over-budget .progress-track > span,
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"]) .over-budget .progress-track > span,
+:is([data-theme="dark"], [data-theme="neon"])
   .shared-budget.over-budget
   progress::-webkit-progress-value {
   background: var(--red);
 }
-[data-theme="dark"] .over-budget .budget-caption {
+:is([data-theme="dark"], [data-theme="neon"]) .over-budget .budget-caption {
   color: var(--red);
 }
-[data-theme="dark"] .bar-chart {
+:is([data-theme="dark"], [data-theme="neon"]) .bar-chart {
   background: repeating-linear-gradient(
     to top,
     transparent 0,
@@ -2191,41 +2224,66 @@ label .muted {
     #ffffff09 50px
   );
 }
-[data-theme="dark"] .bar-column > span {
+:is([data-theme="dark"], [data-theme="neon"]) .bar-column > span {
   background: transparent;
 }
-[data-theme="dark"] :is(.income-dot, .income-bar) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.income-dot, .income-bar) {
   background: var(--cyan);
 }
-[data-theme="dark"] :is(.expense-dot, .expense-bar) {
+:is([data-theme="dark"], [data-theme="neon"]) :is(.expense-dot, .expense-bar) {
   background: #a855f7;
 }
-[data-theme="dark"] .bottom-nav {
+:is([data-theme="dark"], [data-theme="neon"]) .bottom-nav {
   color: var(--muted);
   border-top: 1px solid var(--line);
 }
-[data-theme="dark"] .bottom-nav > button.active {
+:is([data-theme="dark"], [data-theme="neon"]) .bottom-nav > button.active {
   color: var(--cyan);
 }
-[data-theme="dark"]
+:is([data-theme="dark"], [data-theme="neon"])
   :is(
     .bottom-nav > button.active svg,
     .desktop-sidebar nav button.selected svg
   ) {
   filter: drop-shadow(0 0 6px #a855f780);
 }
-[data-theme="dark"] .nav-create > span {
+:is([data-theme="dark"], [data-theme="neon"]) .nav-create > span {
   background: var(--grad-holo);
   box-shadow: 0 0 20px #8b5cf64d;
 }
-[data-theme="dark"] .login-story > .brand {
+:is([data-theme="dark"], [data-theme="neon"]) .login-story > .brand {
   color: var(--ink);
 }
-[data-theme="dark"] .login-pill {
+:is([data-theme="dark"], [data-theme="neon"]) .login-pill {
   background: var(--mint);
   color: var(--mint-ink);
   border-color: var(--line);
 }
-[data-theme="dark"] .wallet-orbit {
+:is([data-theme="dark"], [data-theme="neon"]) .wallet-orbit {
   background: #8b5cf62e;
+}
+
+.library-chart {
+  width: 100%;
+  min-width: 0;
+  margin: 16px 0;
+}
+.library-gauge {
+  position: relative;
+  text-align: center;
+}
+.library-gauge-value {
+  position: absolute;
+  top: 95px;
+  left: 0;
+  right: 0;
+  font-size: 30px;
+}
+
+:root[data-theme="neon"] {
+  --primary: #d8b4fe;
+  --mint: #081820;
+  --mint-ink: #34d399;
+  --lilac: #18132f;
+  --shadow: 0 12px 36px #00000040, 0 0 28px #a855f72b;
 }

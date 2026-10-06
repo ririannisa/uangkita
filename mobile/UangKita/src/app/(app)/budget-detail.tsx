@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   Button,
   Card,
+  DailyFoodAllowance,
   Metric,
   Page,
   Progress,
@@ -32,6 +33,7 @@ export default function BudgetDetailScreen() {
         <Metric label="Realisasi" value={r.spent} />
         <Metric label="Sisa anggaran" value={r.remaining} />
         <Progress percent={r.percent} label={budget.name} />
+        <DailyFoodAllowance budget={budget} />
         <Button
           title="Ubah anggaran"
           onPress={() =>

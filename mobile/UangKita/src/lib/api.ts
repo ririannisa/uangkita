@@ -28,7 +28,7 @@ export async function api<T>(
 ): Promise<T> {
   if (!apiURL)
     throw new ApiError(
-      "Alamat server belum diatur. Isi EXPO_PUBLIC_API_URL atau coba mode demo.",
+      "Alamat server belum diatur. Isi EXPO_PUBLIC_API_URL.",
       0,
     );
   const url = new URL(apiURL);
