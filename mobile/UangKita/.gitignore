@@ -45,3 +45,7 @@ example
 /test-results/
 /playwright-report/
 /artifacts/
+
+# Google Play service account and local signing credentials
+/credentials/
+/credentials.json

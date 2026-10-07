@@ -55,7 +55,10 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/core.test.ts",
-    "build:apk": "npx eas-cli@latest build --platform android --profile production"
+    "build:apk": "npx eas-cli@latest build --platform android --profile production",
+    "build:aab": "npx eas-cli@latest build --platform android --profile store",
+    "submit:play": "npx eas-cli@latest submit --platform android --profile store",
+    "build:play": "npx eas-cli@latest build --platform android --profile store --auto-submit-with-profile store"
   },
   "private": true
 }

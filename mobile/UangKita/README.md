@@ -69,7 +69,7 @@ Tes UI menjalankan React Native melalui React Native Web dengan API tiruan yang 
 
 ## APK
 
-`eas.json` menyediakan profil `preview` untuk APK dan `production` untuk Android App Bundle. Keduanya sudah memakai URL API UangKita. Setelah masuk ke akun Expo dan menghubungkan proyek EAS, jalankan:
+`eas.json` menyediakan profil `preview` dan `production` untuk APK, serta `store` untuk Android App Bundle. Semuanya memakai URL API UangKita. Setelah masuk ke akun Expo dan menghubungkan proyek EAS, jalankan:
 
 ```powershell
 npm run build:apk
@@ -78,3 +78,7 @@ npm run build:apk
 Perintah ini membangun dan menandatangani APK melalui EAS. Bundle Android lokal saja belum merupakan APK. Package Android awal: `id.uangkita.mobile`.
 
 Referensi: [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/), [Expo Router Stack](https://docs.expo.dev/router/advanced/stack/), [EAS APK](https://docs.expo.dev/build-reference/apk/).
+
+## Google Play
+
+Ikuti [checklist publikasi dan update](PLAY_STORE_CHECKLIST.md) untuk setup Play Console, service account, EAS Submit, testing, dan rilis. `npm run build:aab` membuat AAB; `npm run build:play` membuat AAB lalu mengunggahnya otomatis ke draft Internal testing setelah kredensial Google dikonfigurasi. Publikasi dan review diselesaikan di Play Console.
