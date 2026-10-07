@@ -1,10 +1,10 @@
 import { test, expect, type Page } from "../../../../node_modules/@playwright/test";
 import { applyMutation } from "../../src/lib/core";
 import { sampleData } from "../fixtures";
-import { mutationSchema, today, withFinanceDetails, type FinanceData } from "../../src/lib/finance";
+import { emptyData, mutationSchema, today, withFinanceDetails, type FinanceData } from "../../src/lib/finance";
 
 async function mockAccount(page: Page, data: FinanceData = sampleData(today().slice(0, 7))) {
-  const account = { data, signedIn: false };
+  const account = { data, signedIn: false, deletionAttempts: 0, deletionError: "" };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -24,6 +24,17 @@ async function mockAccount(page: Page, data: FinanceData = sampleData(today().sl
     } else if (!account.signedIn) {
       status = 401;
       result = { error: "Silakan masuk terlebih dahulu." };
+    } else if (path === "/api/account/delete") {
+      expect(request.postDataJSON()).toEqual({ confirmation: "HAPUS AKUN", acknowledgeSharedData: true });
+      account.deletionAttempts++;
+      if (account.deletionError) {
+        status = 403;
+        result = { error: account.deletionError };
+      } else {
+        account.signedIn = false;
+        account.data = emptyData;
+        result = { success: true, message: "User deleted" };
+      }
     } else if (path === "/api/finance") {
       if (request.method() === "POST") {
         account.data = applyMutation(account.data, mutationSchema.parse(request.postDataJSON()));
@@ -48,6 +59,36 @@ async function login(page: Page) {
   await page.getByRole("button", { name: "Masuk ke UangKita", exact: true }).click();
   await expect(page.getByText("DOMPET PRIBADI", { exact: true })).toBeVisible();
 }
+
+test("account deletion requires confirmation, preserves login on failure, and clears login on success", async ({ page }) => {
+  test.setTimeout(90000); // The first screen may include a cold Metro compilation.
+  const account = await mockAccount(page);
+  await page.goto("/");
+  await login(page);
+  await page.getByRole("button", { name: "Akun saya", exact: true }).last().click();
+  const remove = page.getByRole("button", { name: "Hapus akun permanen", exact: true });
+  await expect(remove).toBeDisabled();
+  await page.getByRole("textbox", { name: "Ketik HAPUS AKUN", exact: true }).fill("HAPUS");
+  await expect(remove).toBeDisabled();
+  await page.getByRole("textbox", { name: "Ketik HAPUS AKUN", exact: true }).fill("HAPUS AKUN");
+  page.once("dialog", dialog => dialog.dismiss());
+  await remove.click();
+  expect(account.deletionAttempts).toBe(0);
+  account.deletionError = "Keluar lalu masuk kembali untuk menghapus akun.";
+  page.once("dialog", dialog => dialog.accept());
+  await remove.click();
+  await expect(page.getByText(account.deletionError, { exact: true }).last()).toBeAttached();
+  expect(account.signedIn).toBe(true);
+  expect(account.data.entries.length).toBeGreaterThan(0);
+  await expect(remove).toBeEnabled();
+  account.deletionError = "";
+  page.once("dialog", dialog => dialog.accept());
+  await remove.click();
+  await expect(page.getByRole("button", { name: "Masuk ke UangKita", exact: true })).toBeVisible();
+  expect(account.deletionAttempts).toBe(2);
+  expect(account.signedIn).toBe(false);
+  expect(account.data.entries).toHaveLength(0);
+});
 
 test("recording can search every saved category and reuse its name without duplicates", async ({ page }) => {
   const data = sampleData(today().slice(0, 7));
