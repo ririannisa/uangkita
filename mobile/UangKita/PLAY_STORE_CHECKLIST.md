@@ -30,7 +30,8 @@ Sumber: [pendaftaran developer](https://support.google.com/googleplay/android-de
 - [x] Implementasi hapus akun dari menu Akun mobile dan halaman publik `/delete-account` tanpa perlu memasang aplikasi.
 - [x] API Next.js `POST /api/account/delete` dengan autentikasi, pemeriksaan origin, konfirmasi `HAPUS AKUN`, dan persetujuan dampak pada data bersama.
 - [x] Migrasi `007_account_deletion.sql`: cleanup atomik saat identitas Neon Auth dihapus; data pribadi, transaksi/aktivitas buatan pengguna, keanggotaan, dan undangan email ikut dihapus. Data anggota lain tetap ada.
-- [ ] Deploy web/API terbaru; periksa kedua URL publik di bawah ini dari browser tanpa login.
+- [x] Web/API terbaru sudah di-push; `/privacy` dan `/delete-account` di domain production terverifikasi HTTP 200 tanpa login pada 7 Oktober 2026.
+- [x] Uji database rollback lulus: konfirmasi kepemilikan ruang, cleanup identitas/sesi/kredensial/data aplikasi, penolakan sesi lama/kedaluwarsa/impersonasi/sesi akun lain, dan perlindungan data anggota lain.
 - [ ] Pastikan database deployment sama dengan branch Neon Auth dan migrasi cleanup sudah terpasang. API memakai satu transaksi database untuk menghapus identitas, sesi, kredensial, dan data aplikasi.
 - [ ] Uji end-to-end dengan akun khusus pengujian: sesi baru maksimal 15 menit, konfirmasi, sesi kedaluwarsa, kepemilikan ruang, dan kehilangan akses setelah akun dihapus.
 - [ ] Tetapkan dan verifikasi masa retensi backup database serta log Neon/Vercel; isi kebijakan privasi dengan durasi aktual sebelum review.
