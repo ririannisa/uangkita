@@ -19,9 +19,11 @@ import "./login.css";
 export default function LoginForm({
   configured,
   oauthError = false,
+  returnTo = "/",
 }: {
   configured: boolean;
   oauthError?: boolean;
+  returnTo?: "/" | "/delete-account";
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -43,13 +45,13 @@ export default function LoginForm({
           ? await authClient.signIn.email({
               email,
               password,
-              callbackURL: window.location.origin + "/",
+              callbackURL: window.location.origin + returnTo,
             })
           : await authClient.signUp.email({
               email,
               password,
               name: String(form.get("name")).trim(),
-              callbackURL: window.location.origin + "/",
+              callbackURL: window.location.origin + returnTo,
             });
       if (result.error)
         setMessage(
@@ -61,7 +63,7 @@ export default function LoginForm({
         setMessage("Akun dibuat. Periksa email untuk verifikasi, lalu masuk.");
         setMode("login");
       } else {
-        router.replace("/");
+        router.replace(returnTo);
         router.refresh();
       }
     } catch {
@@ -76,8 +78,8 @@ export default function LoginForm({
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: window.location.origin + "/",
-        errorCallbackURL: window.location.origin + "/login?error=google",
+        callbackURL: window.location.origin + returnTo,
+        errorCallbackURL: window.location.origin + "/login?error=google&returnTo=" + encodeURIComponent(returnTo),
       });
       if (result.error)
         setMessage(
@@ -282,6 +284,7 @@ export default function LoginForm({
           <div className="login-trust">
             <ShieldCheck size={15} /> Catatan pribadi, untuk kamu sendiri.
           </div>
+          <p className="login-switch"><Link href="/privacy">Kebijakan privasi</Link> · <Link href="/delete-account">Hapus akun</Link></p>
           <Link href="/demo" className="login-preview">
             Intip dulu juga boleh <ArrowUpRight size={16} />
           </Link>

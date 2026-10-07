@@ -25,7 +25,7 @@ Buka di Expo Go yang mendukung SDK 57 atau development build yang sesuai. Androi
 - Tabungan: setoran, penarikan, riwayat, dan rencana target bulanan/kumulatif.
 - Tagihan: template rutin, pencatatan bulanan, kredit belum lunas, dan perkiraan sisa uang.
 - Analitik: arus kas enam bulan, pengeluaran kategori, rasio dan kesehatan kredit.
-- Akun: login/daftar email, verifikasi OTP, tema terang/gelap, sembunyikan nominal, kategori, impor/ekspor cadangan JSON, dan reset dengan konfirmasi.
+- Akun: login/daftar email, verifikasi OTP, tema, sembunyikan nominal, kategori, impor/ekspor cadangan JSON, reset, kebijakan privasi, dukungan, dan hapus akun permanen dengan konfirmasi.
 - Ruang bersama: buat ruang pasangan/keluarga, kontribusi, pengeluaran, kredit, anggaran, undangan, anggota, riwayat perubahan, dan penghapusan ruang oleh pemilik.
 
 Login Google memakai provider Neon yang sama dengan web, membuka browser sistem, lalu kembali ke aplikasi melalui `uangkita://login`. Backend Next.js perlu di-deploy dengan route `/api/mobile-auth/callback` yang baru sebelum dicoba pada API produksi. Gunakan APK atau development build; Expo Go tidak mendaftarkan scheme UangKita. Tidak perlu membuat password baru untuk akun Google atau memasukkan client secret Google ke aplikasi.
@@ -42,7 +42,9 @@ Contoh: Beranda → Anggaran → Tabungan → Back kembali ke Anggaran. Form ber
 
 `EXPO_PUBLIC_API_URL` sudah diatur ke `https://uangkita.aksenraras.my.id` pada konfigurasi lokal, contoh environment, dan kedua profil build EAS. URL ini adalah URL publik server, bukan rahasia. Jangan menaruh `DATABASE_URL`, secret Neon, atau kredensial server pada variabel `EXPO_PUBLIC_*`.
 
-API client menggunakan `/api/auth/*`, `/api/finance`, `/api/spaces`, dan `/api/spaces/:id/finance`. Cookie token sesi Neon disimpan di Expo SecureStore, dikaitkan dengan origin server, dan disertakan hanya pada permintaan API ke server tersebut. Header Origin memenuhi pemeriksaan API yang sudah ada. Pemeriksaan sesi, kepemilikan data, validasi, dan izin ruang pada backend tetap berlaku.
+API client menggunakan `/api/auth/*`, `/api/finance`, `/api/spaces`, `/api/spaces/:id/finance`, dan `/api/account/delete`. Cookie token sesi Neon disimpan di Expo SecureStore, dikaitkan dengan origin server, dan disertakan hanya pada permintaan API ke server tersebut. Header Origin memenuhi pemeriksaan API yang sudah ada. Pemeriksaan sesi, kepemilikan data, validasi, dan izin ruang pada backend tetap berlaku.
+
+Privasi tersedia di `/privacy` dan panduan penghapusan di `/delete-account`, keduanya dapat dibuka tanpa login. Penghapusan permanen memerlukan konfirmasi `HAPUS AKUN`, persetujuan dampak pada transaksi ruang bersama, dan sesi login baru dalam 15 menit terakhir, untuk akun email maupun Google. Pemilik harus menghapus ruang terlebih dahulu melalui konfirmasi nama ruang. Pasang migrasi `007_account_deletion.sql` pada database yang sama dengan Neon Auth; API menolak penghapusan jika cleanup atomik belum terpasang. Sesi diverifikasi langsung ke layanan autentikasi lalu diperiksa kembali di database. Akun, sesi, kredensial, dan data terkait dihapus dalam satu transaksi melalui cascade serta trigger; sesi lokal mobile dibersihkan setelah API berhasil.
 
 Perhitungan dan skema validasi dipakai dari `../../lib/` melalui `src/lib/finance.ts`. Metro menyelesaikan dependensi dari `mobile/UangKita/node_modules`, agar React Native tidak tercampur dengan React web. Build Next di root mengecualikan `mobile/` dari TypeScript dan ESLint.
 

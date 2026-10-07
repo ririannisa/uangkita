@@ -1353,6 +1353,7 @@ export default function Dashboard({
                       : "Catatanmu tersimpan pada akunmu. Ekspor cadangan secara berkala untuk menyimpan salinan pribadi."}
                   </p>
                 </div>
+                <p className="account-note"><a href="/privacy">Kebijakan privasi</a> · <a href="mailto:contact@aksenraras.my.id">Dukungan</a>{!demo && <> · <a href="/delete-account">Hapus akun permanen</a></>}</p>
                 <button
                   className="danger-button full"
                   onClick={() => {

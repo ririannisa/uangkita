@@ -44,6 +44,7 @@ type Store = {
   login: (email: string, password: string, name?: string) => Promise<boolean>;
   loginGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: (confirmation: string) => Promise<boolean>;
   spaces: SpaceOverview;
   loadSpaces: () => Promise<void>;
 };
@@ -141,7 +142,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       await api("/api/finance", parsed.data);
       setData({
         ...next,
-        budgets: next.budgets.map((budget) => ({ ...budget, dailyFoodAllowance: null })),
+        budgets: next.budgets.map((budget) => ({
+          ...budget,
+          dailyFoodAllowance: null,
+        })),
       });
       await reload().catch(() =>
         setError(
@@ -184,9 +188,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const attempt = { cookie: "" };
     try {
       if (Platform.OS === "web")
-        throw new Error(
-          "Login Google tersedia di aplikasi Android/iOS.",
-        );
+        throw new Error("Login Google tersedia di aplikasi Android/iOS.");
       if (Constants.appOwnership === "expo")
         throw new Error(
           "Login Google memerlukan APK atau development build UangKita. Expo Go tidak mendaftarkan callback uangkita://.",
@@ -222,7 +224,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         undefined,
         attempt,
       );
-      if (!exchanged?.user) throw new Error("Sesi Google belum tersedia. Silakan ulangi login.");
+      if (!exchanged?.user)
+        throw new Error("Sesi Google belum tersedia. Silakan ulangi login.");
       await completeLogin();
       return true;
     } catch (e) {
@@ -273,6 +276,32 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       setBusy(false);
     }
   }
+  async function deleteAccount(confirmation: string) {
+    if (pending.current) return false;
+    pending.current = true;
+    generation.current++;
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/account/delete", {
+        confirmation,
+        acknowledgeSharedData: true,
+      });
+      await clearSession().catch(() => undefined);
+      setUser(null);
+      setData(emptyData);
+      setSpaces({ spaces: [], invitations: [], emailVerified: false });
+      return true;
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Akun belum berhasil dihapus.",
+      );
+      return false;
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
+  }
   return (
     <Context.Provider
       value={{
@@ -293,6 +322,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         login,
         loginGoogle,
         logout,
+        deleteAccount,
         spaces,
         loadSpaces,
       }}

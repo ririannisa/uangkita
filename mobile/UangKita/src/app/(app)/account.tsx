@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Linking, Platform, Pressable, Text, View } from "react-native";
 import {
   ArrowDownLeft,
   Wallet,
@@ -36,7 +36,7 @@ import {
   useColors,
 } from "@/components/finance-ui";
 import { useFinance } from "@/lib/store";
-import { api } from "@/lib/api";
+import { api, apiURL } from "@/lib/api";
 import { backupSchema, categoryOptions, today } from "@/lib/finance";
 
 export default function AccountScreen() {
@@ -47,6 +47,7 @@ export default function AccountScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [working, setWorking] = useState(false);
   const [reset, setReset] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const busy = store.busy || working;
   async function exportBackup() {
     setWorking(true);
@@ -258,19 +259,21 @@ export default function AccountScreen() {
       </Card>
       <Card title="Kategori pribadi" icon={Tags}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {(store.data.availableCategories ?? categoryOptions(store.data)).map((name) => (
-            <View
-              key={name}
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 7,
-                borderRadius: 8,
-                backgroundColor: c.lilac,
-              }}
-            >
-              <Text style={{ color: c.primary, fontSize: 12 }}>{name}</Text>
-            </View>
-          ))}
+          {(store.data.availableCategories ?? categoryOptions(store.data)).map(
+            (name) => (
+              <View
+                key={name}
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 7,
+                  borderRadius: 8,
+                  backgroundColor: c.lilac,
+                }}
+              >
+                <Text style={{ color: c.primary, fontSize: 12 }}>{name}</Text>
+              </View>
+            ),
+          )}
         </View>
         <Field
           label="Nama kategori baru"
@@ -347,6 +350,38 @@ export default function AccountScreen() {
           }
         />
       </Card>
+      <Card title="Privasi dan dukungan" icon={ShieldCheck}>
+        <MenuRow
+          icon={ShieldCheck}
+          title="Kebijakan privasi"
+          description="Data, penggunaan, dan penghapusan"
+          onPress={() => {
+            void Linking.openURL(`${apiURL}/privacy`).catch(() =>
+              store.setError("Tautan belum dapat dibuka."),
+            );
+          }}
+        />
+        <MenuRow
+          icon={Trash2}
+          title="Informasi penghapusan akun"
+          description="Panduan dan permintaan melalui web"
+          onPress={() => {
+            void Linking.openURL(`${apiURL}/delete-account`).catch(() =>
+              store.setError("Tautan belum dapat dibuka."),
+            );
+          }}
+        />
+        <MenuRow
+          icon={ShieldCheck}
+          title="Hubungi dukungan"
+          description="contact@aksenraras.my.id"
+          onPress={() => {
+            void Linking.openURL("mailto:contact@aksenraras.my.id").catch(() =>
+              store.setError("Kirim email ke contact@aksenraras.my.id."),
+            );
+          }}
+        />
+      </Card>
       <Card title="Hapus data pribadi" icon={Trash2}>
         <Txt muted>
           Ketik HAPUS untuk mengosongkan transaksi dan rencana pribadi. Tindakan
@@ -372,6 +407,44 @@ export default function AccountScreen() {
                   await store.save({ action: "reset", confirmation: "HAPUS" })
                 )
                   setReset("");
+              },
+            )
+          }
+        />
+      </Card>
+      <Card title="Hapus akun permanen" icon={Trash2}>
+        <Txt muted>
+          Akun login, data pribadi, keanggotaan, serta transaksi dan aktivitas
+          buatanmu di ruang bersama akan dihapus permanen. Saldo ruang bersama
+          dapat berubah. Simpan cadangan terlebih dahulu.
+        </Txt>
+        <Txt muted>
+          Jika masih memiliki ruang, hapus ruang terlebih dahulu melalui menu
+          Bersama dengan konfirmasi nama ruang. Penghapusan ruang berdampak pada
+          seluruh anggota.
+        </Txt>
+        <Txt muted>
+          Keluar lalu masuk kembali sebelum menghapus akun. Penghapusan
+          memerlukan sesi login baru dalam 15 menit terakhir, untuk akun email
+          maupun Google.
+        </Txt>
+        <Field
+          label="Ketik HAPUS AKUN"
+          value={deleteConfirmation}
+          onChangeText={setDeleteConfirmation}
+          autoCapitalize="characters"
+        />
+        <Button
+          icon={Trash2}
+          danger
+          title="Hapus akun permanen"
+          disabled={busy || deleteConfirmation !== "HAPUS AKUN"}
+          onPress={() =>
+            confirm(
+              "Hapus akun permanen?",
+              "Saya memahami akun dan data pribadi serta transaksi buatan saya di ruang bersama akan dihapus. Tindakan ini tidak dapat dibatalkan.",
+              async () => {
+                await store.deleteAccount(deleteConfirmation);
               },
             )
           }

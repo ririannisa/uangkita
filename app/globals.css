@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+.legal-page { max-width: 800px; margin: 0 auto; padding: 32px 20px 64px; line-height: 1.75; overflow-wrap: anywhere; }
+.legal-page h1 { font-size: clamp(26px, 5vw, 36px); line-height: 1.3; margin: 28px 0 16px; }
+.legal-page h2 { font-size: 21px; margin: 28px 0 12px; }
+.legal-page p { margin: 12px 0; }
+.legal-page ul, .legal-page ol { padding-left: 24px; list-style: revert; }
+.legal-page nav { display: flex; flex-wrap: wrap; gap: 20px; }
+.legal-page a { text-decoration: underline; color: var(--primary); }
+.legal-card { padding: 24px; margin: 24px 0; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+.legal-card label { display: grid; gap: 8px; margin: 16px 0; }
+.legal-card input:not([type="checkbox"]) { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--bg); }
+.legal-card .legal-checkbox { display: flex; align-items: flex-start; gap: 12px; }
+.legal-checkbox input { margin-top: 7px; flex-shrink: 0; }
+.legal-card a.primary { display: inline-flex; color: white; text-decoration: none; }
+
 .credit-health ul {
   display: grid;
   gap: 10px;

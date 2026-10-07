@@ -18,7 +18,7 @@ Diperiksa: 7 Oktober 2026. Label menu dan persyaratan bisa berubah; cek sumber r
 - [ ] Bayar biaya pendaftaran US$25 sekali bayar dan selesaikan verifikasi identitas/kontak.
 - [ ] Untuk akun personal baru, selesaikan verifikasi perangkat Android bila diminta.
 - [ ] Tetapkan package Android sebelum upload pertama; identitas ini permanen di Play Store.
-- [ ] Siapkan email dukungan yang aktif.
+- [x] Email dukungan publik: `contact@aksenraras.my.id` (pastikan kotak masuk aktif).
 
 Sumber: [pendaftaran developer](https://support.google.com/googleplay/android-developer/answer/6112435?hl=en), [identitas aplikasi](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en).
 
@@ -26,16 +26,32 @@ Sumber: [pendaftaran developer](https://support.google.com/googleplay/android-de
 
 - [x] Ikon UangKita dan splash screen sudah terpasang.
 - [x] Profil APK dan profil AAB/submit tersedia di repository.
-- [ ] Buat halaman kebijakan privasi publik dan tautannya di aplikasi.
-- [ ] Sediakan jalur permintaan hapus akun dari aplikasi serta halaman web yang bisa digunakan tanpa memasang ulang aplikasi.
-- [ ] Terapkan penghapusan akun/data terkait sesuai proses yang dijanjikan; tentukan penanganan anggota, ruang bersama, undangan, dan data bersama.
+- [x] Implementasi halaman kebijakan privasi publik `/privacy` dan tautan pada login serta menu Akun web/mobile.
+- [x] Implementasi hapus akun dari menu Akun mobile dan halaman publik `/delete-account` tanpa perlu memasang aplikasi.
+- [x] API Next.js `POST /api/account/delete` dengan autentikasi, pemeriksaan origin, konfirmasi `HAPUS AKUN`, dan persetujuan dampak pada data bersama.
+- [x] Migrasi `007_account_deletion.sql`: cleanup atomik saat identitas Neon Auth dihapus; data pribadi, transaksi/aktivitas buatan pengguna, keanggotaan, dan undangan email ikut dihapus. Data anggota lain tetap ada.
+- [ ] Deploy web/API terbaru; periksa kedua URL publik di bawah ini dari browser tanpa login.
+- [ ] Pastikan database deployment sama dengan branch Neon Auth dan migrasi cleanup sudah terpasang. API memakai satu transaksi database untuk menghapus identitas, sesi, kredensial, dan data aplikasi.
+- [ ] Uji end-to-end dengan akun khusus pengujian: sesi baru maksimal 15 menit, konfirmasi, sesi kedaluwarsa, kepemilikan ruang, dan kehilangan akses setelah akun dihapus.
+- [ ] Tetapkan dan verifikasi masa retensi backup database serta log Neon/Vercel; isi kebijakan privasi dengan durasi aktual sebelum review.
+- [ ] Build AAB terbaru agar menu privasi dan hapus akun masuk dalam binary yang dikirim ke reviewer.
 - [ ] Siapkan akun khusus reviewer dengan login email/password yang sudah terverifikasi serta data contoh.
 - [ ] Pastikan reviewer dapat memakai semua fitur tanpa bergantung pada OTP atau persetujuan pribadi pemilik aplikasi.
 - [ ] Uji login email dan Google pada perangkat Android nyata, termasuk kembali dari browser.
 - [ ] Uji kategori, transaksi, anggaran, jatah harian, pembayaran kredit, tabungan, ruang bersama, backup/impor, dan reset.
 - [ ] Pastikan backend production tersedia selama testing dan review.
 
-Saat checklist dibuat, **Hapus data pribadi** hanya mereset catatan/rencana, belum merupakan penghapusan akun. Halaman kebijakan privasi dan jalur hapus akun belum ditemukan dalam kode aplikasi. Nama URL harus mengikuti halaman yang benar-benar dibuat dan berfungsi.
+**Hapus data pribadi** tetap mereset catatan/rencana tanpa menghapus identitas login. Gunakan **Hapus akun permanen** untuk menghapus akun beserta data terkait. Pemilik ruang harus menghapus ruang melalui konfirmasi nama ruang terlebih dahulu; ini merupakan tindakan terpisah yang berdampak pada seluruh anggota. Penghapusan akun anggota menghapus transaksi buatannya sehingga saldo ruang dapat berubah.
+
+URL untuk Play Console setelah deployment terverifikasi:
+
+| Kegunaan | URL |
+| --- | --- |
+| Privacy policy | `https://uangkita.aksenraras.my.id/privacy` |
+| Account deletion | `https://uangkita.aksenraras.my.id/delete-account` |
+| Dukungan | `contact@aksenraras.my.id` |
+
+Jalankan `npm.cmd run db:migrate` dari root pada database yang sama dengan Neon Auth deployment. API menolak penghapusan jika trigger cleanup belum terpasang. `npm.cmd run test:account:db` menguji cleanup dan perlindungan ruang menggunakan data sintetis yang seluruhnya di-rollback; tidak menghapus akun pengguna nyata.
 
 Kebijakan privasi menjelaskan pengelola/kontak, jenis data, tujuan pemrosesan, penyedia layanan, retensi, dan proses penghapusan. Permintaan hapus akun dapat dimulai melalui halaman web yang ditautkan dari aplikasi; penghapusan tetap perlu benar-benar diproses.
 

@@ -1,11 +1,6 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import {
-  Eye,
-  EyeOff,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react-native";
+import { Linking, Pressable, Text, View } from "react-native";
+import { Eye, EyeOff, ShieldCheck, Sparkles } from "lucide-react-native";
 import Svg, { Path } from "react-native-svg";
 import {
   Brand,
@@ -249,6 +244,23 @@ export default function LoginScreen() {
             Catatan pribadi, untuk kamu sendiri.
           </Text>
         </View>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => {
+            void Linking.openURL(`${apiURL}/privacy`).catch(() =>
+              store.setError("Tautan belum dapat dibuka."),
+            );
+          }}
+          style={{
+            minHeight: 44,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Text style={{ color: c.primary, fontSize: 12 }}>
+            Kebijakan privasi UangKita
+          </Text>
+        </Pressable>
       </View>
     </Page>
   );
