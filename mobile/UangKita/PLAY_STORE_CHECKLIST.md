@@ -72,6 +72,50 @@ Sumber: [persiapan review](https://support.google.com/googleplay/android-develop
 - [ ] Tinjau nama/email, ID akun, riwayat transaksi, pendapatan/utang, pemrosesan server, layanan pihak ketiga, dan penghapusan untuk Data safety.
 - [ ] Jelaskan fungsi pencatatan keuangan dan kredit sesuai implementasi aktual ketika mengisi financial features.
 
+### Deskripsi singkat — siap disalin
+
+```text
+Catat keuangan, atur anggaran, dan kelola tabungan pribadi atau bersama.
+```
+
+### Deskripsi lengkap — siap disalin
+
+```text
+UangKita membantu kamu mencatat keuangan sehari-hari, merencanakan anggaran, dan memantau tabungan dalam satu aplikasi. Kelola catatan pribadi atau buat ruang bersama untuk pasangan dan keluarga.
+
+CATAT PEMASUKAN DAN PENGELUARAN
+Catat penghasilan, pengeluaran, serta setoran dan penarikan tabungan. Gunakan kategori yang tersedia atau tambahkan kategori sendiri. Cari transaksi dan gunakan filter untuk menemukan catatan yang kamu butuhkan.
+
+RENCANAKAN ANGGARAN BULANAN
+Atur pendapatan dan anggaran per kategori, lalu bandingkan rencana dengan pengeluaran yang sudah tercatat. Lihat sisa anggaran dan transaksi terbesar untuk membantu menentukan prioritas belanja.
+
+PANTAU JATAH MAKAN PER HARI
+Lihat perkiraan jatah makan harian berdasarkan sisa anggaran makan, sisa uang yang tercatat, dan jumlah hari sampai akhir bulan. Saat uang yang tersedia lebih terbatas, perhitungan menyesuaikan dengan sisa uang tersebut.
+
+KELOLA TABUNGAN DAN TARGET
+Catat setoran dan penarikan, lihat riwayat tabungan, serta susun target dan rencana menabung. Pantau perkembangan tabunganmu dari waktu ke waktu.
+
+PANTAU TAGIHAN DAN PEMBAYARAN KREDIT
+Buat catatan tagihan rutin, catat pembelian dengan pembayaran kredit, dan pantau jatuh temponya. Catat pembayaran bertahap agar sisa kewajiban dan arus kas mengikuti pembayaran yang sudah dilakukan.
+
+LIHAT RINGKASAN KEUANGAN
+Pantau saldo, pemasukan, pengeluaran, dan perkiraan tagihan dari beranda. Gunakan grafik arus kas dan pengeluaran per kategori untuk memahami kebiasaan keuanganmu.
+
+ATUR KEUANGAN BERSAMA
+Buat ruang untuk pasangan atau keluarga, undang anggota, lalu catat kontribusi dan pengeluaran bersama. Kelola anggaran ruang dan lihat riwayat aktivitas anggota, sementara catatan pribadi tetap terpisah dari ruang bersama.
+
+SESUAIKAN TAMPILAN DAN SIMPAN CADANGAN
+Pilih tema sesuai selera, sembunyikan nominal saat diperlukan, serta ekspor atau impor cadangan catatan pribadi. Catatan pada akun yang sama dapat diakses melalui aplikasi dan web UangKita.
+
+UangKita menggunakan pencatatan yang kamu masukkan. Kamu perlu akun dan koneksi internet untuk mengakses serta menyimpan data. Kebijakan privasi dan fitur hapus akun tersedia melalui menu Akun.
+
+Mulai dari catatan kecil hari ini, bangun kebiasaan keuangan yang lebih terarah bersama UangKita.
+
+Dukungan: contact@aksenraras.my.id
+```
+
+Teks ini menggambarkan fitur yang sudah tersedia. Salin isi blok teks saja ke kolom deskripsi di Play Console. Batas deskripsi singkat 80 karakter dan deskripsi lengkap 4.000 karakter.
+
 Data UangKita dikirim ke server, sehingga jawaban Data safety harus menggambarkan alur tersebut. Tentukan jawaban "dibagikan" berdasarkan definisi Google dan pemrosesan nyata; penggunaan penyedia layanan tidak otomatis berarti semua data harus dinyatakan dibagikan.
 
 Sumber: [listing](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en), [aset visual](https://support.google.com/googleplay/android-developer/answer/9866151?hl=en), [Data safety](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en), [financial features](https://support.google.com/googleplay/android-developer/answer/13849271?hl=en).
