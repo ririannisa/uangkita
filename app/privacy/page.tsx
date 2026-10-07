@@ -38,6 +38,11 @@ export default function PrivacyPage() {
           transaksi, anggaran, dan aktivitas anggota.
         </li>
         <li>
+          Rencana acara yang kamu masukkan: nama, tanggal, lokasi acara, daftar
+          persiapan, catatan, estimasi biaya, dan status kesiapan. Rencana pribadi
+          hanya tersedia pada akunmu; rencana ruang tersedia bagi anggota ruang.
+        </li>
+        <li>
           Data teknis untuk keamanan dan operasional: sesi login, alamat IP,
           informasi browser/perangkat, serta log permintaan. Situs web
           menggunakan Vercel Analytics dan Speed Insights untuk statistik

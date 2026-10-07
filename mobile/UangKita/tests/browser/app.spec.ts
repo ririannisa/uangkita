@@ -1,10 +1,13 @@
 import { test, expect, type Page } from "../../../../node_modules/@playwright/test";
 import { applyMutation } from "../../src/lib/core";
 import { sampleData } from "../fixtures";
+import { randomUUID } from "node:crypto";
+import templates from "../../../../lib/event-plan-templates.json";
+import { planActionSchema, planSummary, type EventPlan } from "../../../../lib/event-plans";
 import { emptyData, mutationSchema, today, withFinanceDetails, type FinanceData } from "../../src/lib/finance";
 
 async function mockAccount(page: Page, data: FinanceData = sampleData(today().slice(0, 7))) {
-  const account = { data, signedIn: false, deletionAttempts: 0, deletionError: "" };
+  const account = { data, signedIn: false, deletionAttempts: 0, deletionError: "", plans: {} as Record<string, EventPlan[]> };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
@@ -35,6 +38,24 @@ async function mockAccount(page: Page, data: FinanceData = sampleData(today().sl
         account.data = emptyData;
         result = { success: true, message: "User deleted" };
       }
+    } else if (path === "/api/event-plans") {
+      const scope = new URL(request.url()).searchParams.get("spaceId") ?? "personal";
+      const plans = account.plans[scope] ??= [];
+      if (request.method() === "POST") {
+        const action = planActionSchema.parse(request.postDataJSON());
+        if (action.action === "create") {
+          const items = templates[action.kind].map(i => ({ ...i, id: randomUUID() }));
+          plans.push({ id: randomUUID(), kind: action.kind, name: action.name, date: null, location: "", items, revision: 0, summary: planSummary(items) });
+          result = { ok: true };
+        } else {
+          const index = plans.findIndex(p => p.id === action.id && p.revision === action.revision);
+          if (index < 0) { status = 409; result = { error: "Rencana sudah berubah. Muat ulang sebelum menyimpan lagi." }; }
+          else if (action.action === "save") {
+            plans[index] = { ...plans[index], ...action.plan, revision: action.revision + 1, summary: planSummary(action.plan.items) };
+            result = { ok: true };
+          } else { expect(action.confirmation).toBe(plans[index].name); plans.splice(index, 1); result = { ok: true }; }
+        }
+      } else result = { plans, canDelete: true };
     } else if (path === "/api/finance") {
       if (request.method() === "POST") {
         account.data = applyMutation(account.data, mutationSchema.parse(request.postDataJSON()));
@@ -59,6 +80,54 @@ async function login(page: Page) {
   await page.getByRole("button", { name: "Masuk ke UangKita", exact: true }).click();
   await expect(page.getByText("DOMPET PRIBADI", { exact: true })).toBeVisible();
 }
+
+test("event preparation templates are editable, unready, scoped and independent of cash", async ({ page }) => {
+  test.setTimeout(90000);
+  const account = await mockAccount(page);
+  const originalCash = JSON.stringify(account.data);
+  await page.goto("/"); await login(page);
+  await page.getByRole("button", { name: "Persiapan acara", exact: true }).click();
+  await page.getByRole("textbox", { name: "Nama acara", exact: true }).fill("Lamaran kami");
+  await page.getByRole("button", { name: "Buat rencana", exact: true }).click();
+  await page.getByRole("button", { name: "Buka Lamaran kami", exact: true }).click();
+  await expect(page.getByText("0/27 siap (0%)", { exact: true })).toBeVisible();
+  expect(account.plans.personal[0].items.every(i => !i.ready)).toBe(true);
+  await page.getByRole("switch", { name: "Kesiapan Cincin", exact: true }).click();
+  await expect(page.getByText("1/27 siap (4%)", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Edit Cincin", exact: true }).click();
+  await page.getByRole("textbox", { name: "Estimasi biaya (Rp)", exact: true }).fill("150000");
+  await page.getByRole("button", { name: "Simpan item", exact: true }).click();
+  await expect(page.getByText(/^Estimasi Rp.*150/)).toBeVisible();
+  await page.getByRole("button", { name: "Tambah item", exact: true }).click();
+  await page.getByRole("textbox", { name: "Nama item", exact: true }).fill("Transport keluarga");
+  await page.getByRole("button", { name: "Simpan item", exact: true }).click();
+  await expect(page.getByText("1/28 siap (4%)", { exact: true })).toBeVisible();
+  page.once("dialog", d => d.accept());
+  await page.getByRole("button", { name: "Hapus Transport keluarga", exact: true }).click();
+  await expect(page.getByText("1/27 siap (4%)", { exact: true })).toBeVisible();
+  account.plans.personal[0].revision++;
+  await page.getByRole("switch", { name: "Kesiapan Cincin", exact: true }).click();
+  await expect(page.getByText("Rencana sudah berubah. Muat ulang sebelum menyimpan lagi.", { exact: true })).toBeVisible();
+  expect(account.plans.personal[0].items[0].ready).toBe(true);
+  page.once("dialog", d => d.accept());
+  await page.getByRole("button", { name: "Muat ulang rencana", exact: true }).click();
+  const room = randomUUID();
+  await page.goto(`/preparations?scope=${room}`);
+  await page.getByRole("textbox", { name: "Nama acara", exact: true }).fill("Wedding bersama");
+  await page.getByRole("button", { name: "Template: Lamaran", exact: true }).click();
+  await page.getByRole("radio", { name: "Wedding", exact: true }).click();
+  await page.getByRole("button", { name: "Buat rencana", exact: true }).click();
+  await page.getByRole("button", { name: "Buka Wedding bersama", exact: true }).click();
+  await expect(page.getByText("0/55 siap (0%)", { exact: true })).toBeVisible();
+  expect(account.plans[room]).toHaveLength(1);
+  expect(account.plans.personal).toHaveLength(1);
+  expect(JSON.stringify(account.data)).toBe(originalCash);
+  await page.getByRole("textbox", { name: "Ketik nama acara: Wedding bersama", exact: true }).fill("Wedding bersama");
+  page.once("dialog", d => d.accept());
+  await page.getByRole("button", { name: "Hapus seluruh rencana", exact: true }).click();
+  await expect(page.getByText("Belum ada rencana acara.", { exact: true })).toBeVisible();
+  expect(account.plans[room]).toHaveLength(0);
+});
 
 test("account deletion requires confirmation, preserves login on failure, and clears login on success", async ({ page }) => {
   test.setTimeout(90000); // The first screen may include a cold Metro compilation.

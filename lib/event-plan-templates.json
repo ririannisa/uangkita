@@ -1,0 +1,580 @@
+{
+  "lamaran": [
+    {
+      "group": "Persiapan",
+      "name": "Cincin",
+      "note": "Tema: Gold - Toko Emas",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "Baju Lamaran Couple",
+      "note": "Tema: Abu-abu",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "Hias Seserahan",
+      "note": "Tema: Abu-abu",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "MakeUp Lamaran",
+      "note": "Tema: Soft Natural",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "Fotografer",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "Dekor",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "Souvenir Jilbab",
+      "note": "Tema: Soft Natural",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan",
+      "name": "Catering",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Mukenah",
+      "note": "Tema: Putih - Shopee",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Baju Dress Brukat",
+      "note": "Tema: Cream",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Baju Tidur",
+      "note": "Tema: Pink",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Jilbab *3pcs",
+      "note": "Tema: Pink",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Alat Makeup Lengkap",
+      "note": "Tema: Pink",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Handuk",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Sepatu",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Bodycare (lotion)",
+      "note": "Tema: Pink",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Alat Mandi Lengkap",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Underwear",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Wanita",
+      "name": "Barang kesukaan doi (opsional)",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Sarung",
+      "note": "Tema: Cream - Shopee",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Kopiah",
+      "note": "Tema: Hitam",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Baju Koko",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Baju Kaos",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Handuk",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Tas Sepatu Futsal (barang kesukaan si doi)",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Sepatu Futsal",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Seserahan Laki-Laki",
+      "name": "Alat Mandi Lengkap",
+      "note": "Tema: Putih",
+      "estimated": null,
+      "ready": false
+    }
+  ],
+  "wedding": [
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Dokumen Pernikahan",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "KTP ASLI DAN FC 2 LEMBAR",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Berkas FC Calon Pria ( KTP, Ijazah, Akte, KK)",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "KK ASLI DAN FC 2 LEMBAR",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Berkas FC Calon Wanita( KTP, Ijazah, Akte, KK)",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "IJAZAH FC 2 LEMBAR",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "FC KTP Ortu Calon Pria",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "AKTE FC 2 LEMBAR",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "FC KTP Ortu Calon Wanita",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "PAS FOTO 3X4 2 LEMBAR",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Surat Ket. Sehat puskesmas (Calon Pria & Calon Wanita)",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "FC KTP ORTU",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Vaksin Tetanus Calon Wanita",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "SURAT KET BELUM MENIKAH",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Surat pengantar nikah dari kelurahan",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "SURAT PENGANTAR RT RW",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Pas Foto (latar biru baju putih)",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "SURAT KET SEHAT PUSKESMAS",
+      "note": "Puskesmas",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Surat ket. belum nikah dr setempat",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "VAKSIN TETANUS",
+      "note": "Puskesmas",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Pendaftaran ke KUA",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "SURAT NUMPANG NIKAH",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Dokumen",
+      "name": "Foto Prewedding",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persyaratan Kua",
+      "name": "MAP KUNING",
+      "note": "Kasih Pak RT",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Mahar",
+      "name": "Mahar Uang",
+      "note": "Hias Sendiri",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Venue (Gedung)",
+      "note": "Area Resepsi 10m",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Mahar",
+      "name": "CIncin Nikah",
+      "note": "Cincin",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Dekor",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Mahar",
+      "name": "Seperangkat Alat Sholat",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Daun Janur di Gerbang",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Mahar",
+      "name": "Kotak Mahar",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Catering",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "MUA",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Baju Akad",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Baju Resepsi",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "2 Beskap Orgtua (Bapak)",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "2 Baju orang tua (Ibu)",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "MUA + hijab do org tua",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Dokumentasi",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Entertainment",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "MC",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Venue (Gedung)",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Music + Sound",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "KUA & Penghulu",
+      "note": "KUA",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Undangan",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Sambutan & Ceramah Akad",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Buku Tamu",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Qori' Tartil Ayat Suci Al-Quran",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Resepsi",
+      "name": "Souvenir",
+      "note": "WO",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Saksi Nikah Mempelai Pria",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Saksi Nikah Mempelai Wanita",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Pembawa Mas Kawin & Cincin",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Penanggungjawab Mas kawin & Mahar",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Konsumsi Keluarga Inti",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    },
+    {
+      "group": "Persiapan Akad",
+      "name": "Undangan Tamu Akad",
+      "note": "",
+      "estimated": null,
+      "ready": false
+    }
+  ]
+}

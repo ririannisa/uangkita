@@ -288,6 +288,7 @@ export function HomeScreen() {
             ["Tagihan rutin", Wallet, "/bills", "cream"],
             ["Pendapatan", ArrowDownLeft, "/form?kind=income", "mint"],
             ["Ruang bersama", UsersRound, "/spaces", "lilac"],
+            ["Persiapan acara", Target, "/preparations", "peach"],
             ["Kelola kategori", Tags, "/account", "mint"],
           ] as const
         ).map(([label, Icon, href, tone]) => (
@@ -450,10 +451,12 @@ export function ActivityScreen() {
             searchable
             options={[
               { value: "", label: "Semua kategori" },
-              ...(data.activityCategories ?? categoryOptions(data, true)).map((name) => ({
-                value: name,
-                label: name,
-              })),
+              ...(data.activityCategories ?? categoryOptions(data, true)).map(
+                (name) => ({
+                  value: name,
+                  label: name,
+                }),
+              ),
             ]}
           />
         </Row>

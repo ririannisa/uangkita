@@ -1,0 +1,6 @@
+// Keep permissions in SQL so a revoked member cannot write after the initial check.
+const access = `(p.user_id=$1::uuid AND $2::uuid IS NULL OR p.space_id=$2::uuid AND EXISTS (SELECT 1 FROM dompetku.space_members m WHERE m.space_id=p.space_id AND m.user_id=$1::text))`;
+export const readPlansSql = `SELECT p.id,p.kind,p.name,to_char(p.date,'YYYY-MM-DD') AS date,p.location,p.items,p.revision FROM dompetku.event_plans p WHERE ${access} ORDER BY p.created_at,p.id`;
+export const createPlanSql = `INSERT INTO dompetku.event_plans(user_id,space_id,kind,name,items) SELECT CASE WHEN $2::uuid IS NULL THEN $1::uuid ELSE NULL END,$2::uuid,$3,$4,$5::jsonb WHERE $2::uuid IS NULL OR EXISTS(SELECT 1 FROM dompetku.space_members WHERE space_id=$2::uuid AND user_id=$1::text) RETURNING id`;
+export const savePlanSql = `UPDATE dompetku.event_plans p SET name=$5,date=$6::date,location=$7,items=$8::jsonb,revision=p.revision+1 WHERE ${access} AND p.id=$3::uuid AND p.revision=$4 RETURNING p.id`;
+export const deletePlanSql = `DELETE FROM dompetku.event_plans p WHERE ${access} AND p.id=$3::uuid AND p.revision=$4 AND p.name=$5 AND (p.space_id IS NULL OR EXISTS(SELECT 1 FROM dompetku.spaces s WHERE s.id=p.space_id AND s.owner_id=$1::text)) RETURNING p.id`;

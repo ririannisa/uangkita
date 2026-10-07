@@ -53,6 +53,10 @@ export default function AppLayout() {
         <Stack.Screen name="analytics" options={{ title: "Analitik" }} />
         <Stack.Screen name="account" options={{ title: "Akun saya" }} />
         <Stack.Screen name="spaces" options={{ title: "Ruang bersama" }} />
+        <Stack.Screen
+          name="preparations"
+          options={{ title: "Persiapan acara" }}
+        />
         <Stack.Screen name="space" options={{ title: "Keuangan bersama" }} />
         <Stack.Screen
           name="form"

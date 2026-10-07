@@ -1,0 +1,62 @@
+.event-plans {
+  display: grid;
+  gap: 18px;
+}
+.event-plans form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.event-plans label {
+  display: grid;
+  gap: 7px;
+  flex: 1 1 180px;
+}
+.event-plans input,
+.event-plans select {
+  width: 100%;
+  background: var(--surface);
+}
+.event-plan-card {
+  display: grid;
+  gap: 8px;
+  text-align: left;
+}
+.event-plan-card span,
+.event-item small {
+  color: var(--muted);
+  font-size: 14px;
+}
+.event-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.event-item .event-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.event-check input {
+  width: 22px;
+  height: 22px;
+  min-height: 22px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+.event-item small {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 520px) {
+  .event-item {
+    flex-wrap: wrap;
+  }
+  .event-item .event-check {
+    flex-basis: 100%;
+  }
+}

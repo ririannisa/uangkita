@@ -35,4 +35,7 @@ test("privacy and account deletion are public and direct users back after login"
   expect(unauthenticated.status()).toBe(401);
   const bypass = await page.request.post("/api/auth/delete-user", { data: {} });
   expect(bypass.status()).toBe(403);
+  expect((await page.request.get("/api/event-plans")).status()).toBe(401);
+  expect((await page.request.post("/api/event-plans", { data: { action: "create", kind: "lamaran", name: "Acara" } })).status()).toBe(403);
+  expect((await page.request.post("/api/event-plans", { headers: { Origin: "http://localhost:3000" }, data: { action: "create", kind: "lamaran", name: "Acara" } })).status()).toBe(401);
 });

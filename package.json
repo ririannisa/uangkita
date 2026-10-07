@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint app components lib scripts tests proxy.ts next.config.ts playwright.config.ts",
     "db:migrate": "node scripts/migrate.mjs",
-    "test": "tsx --test tests/finance.test.ts tests/shared-finance.test.ts tests/account-deletion.test.ts",
+    "test": "tsx --test tests/finance.test.ts tests/shared-finance.test.ts tests/account-deletion.test.ts tests/event-plans.test.ts",
+    "test:plans:db": "tsx scripts/test-event-plans.mjs",
     "test:account:db": "tsx scripts/test-account-deletion.mjs",
     "test:e2e": "playwright test"
   },

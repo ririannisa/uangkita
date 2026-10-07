@@ -26,13 +26,14 @@ Sumber: [pendaftaran developer](https://support.google.com/googleplay/android-de
 
 - [x] Ikon UangKita dan splash screen sudah terpasang.
 - [x] Profil APK dan profil AAB/submit tersedia di repository.
+- [x] Persiapan Acara tersedia untuk pribadi dan Ruang Bersama di web/mobile: template lamaran/wedding mulai belum dicentang, item bisa ditambah/diedit/dihapus, progres dan total estimasi dihitung API, serta biaya persiapan tidak otomatis menjadi transaksi. Rencana pribadi ikut terhapus saat akun dihapus; rencana ruang ikut terhapus saat ruang dihapus.
 - [x] Implementasi halaman kebijakan privasi publik `/privacy` dan tautan pada login serta menu Akun web/mobile.
 - [x] Implementasi hapus akun dari menu Akun mobile dan halaman publik `/delete-account` tanpa perlu memasang aplikasi.
 - [x] API Next.js `POST /api/account/delete` dengan autentikasi, pemeriksaan origin, konfirmasi `HAPUS AKUN`, dan persetujuan dampak pada data bersama.
 - [x] Migrasi `007_account_deletion.sql`: cleanup atomik saat identitas Neon Auth dihapus; data pribadi, transaksi/aktivitas buatan pengguna, keanggotaan, dan undangan email ikut dihapus. Data anggota lain tetap ada.
 - [x] Web/API terbaru sudah di-push; `/privacy` dan `/delete-account` di domain production terverifikasi HTTP 200 tanpa login pada 7 Oktober 2026.
 - [x] Uji database rollback lulus: konfirmasi kepemilikan ruang, cleanup identitas/sesi/kredensial/data aplikasi, penolakan sesi lama/kedaluwarsa/impersonasi/sesi akun lain, dan perlindungan data anggota lain.
-- [x] Uji dev lulus: 23 tes logika web/API, 28 tes browser Next.js (desktop/ponsel), 6 tes logika mobile, serta 4 tes antarmuka React Native melalui browser. Tes mobile memakai mock API; pembatalan tidak mengirim permintaan hapus akun, kegagalan mempertahankan login/data, dan keberhasilan mengembalikan pengguna ke login. Cleanup database diuji terpisah dengan query API yang sama dan seluruh data sintetis di-rollback.
+- [x] Uji dev lulus: 25 tes logika web/API, 28 tes browser Next.js (desktop/ponsel), 6 tes logika mobile, serta 5 tes antarmuka React Native melalui browser. Tes mobile memakai mock API; pembatalan tidak mengirim permintaan hapus akun, kegagalan mempertahankan login/data, dan keberhasilan mengembalikan pengguna ke login. Persiapan acara diuji untuk tambah/edit/hapus/centang, konflik perubahan, pemisahan pribadi/ruang, dan saldo yang tetap sama. Hak akses, konflik, cascade rencana, serta cleanup akun diuji terpisah dengan query API yang sama dan seluruh data sintetis di-rollback.
 - [ ] Pastikan database deployment sama dengan branch Neon Auth dan migrasi cleanup sudah terpasang. API memakai satu transaksi database untuk menghapus identitas, sesi, kredensial, dan data aplikasi.
 - [ ] Uji end-to-end dengan akun khusus pengujian: sesi baru maksimal 15 menit, konfirmasi, sesi kedaluwarsa, kepemilikan ruang, dan kehilangan akses setelah akun dihapus.
 - [ ] Tetapkan dan verifikasi masa retensi backup database serta log Neon/Vercel; isi kebijakan privasi dengan durasi aktual sebelum review.

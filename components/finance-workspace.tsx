@@ -24,6 +24,7 @@ import {
 } from "@/lib/shared-finance";
 import type { Space, SpaceDetails, SpaceOverview } from "@/lib/spaces";
 import "./spaces.css";
+import Link from "next/link";
 
 async function api(url: string, body?: unknown) {
   const response = await fetch(
@@ -116,6 +117,11 @@ export default function FinanceWorkspace({
   }
   return (
     <>
+      <div className="space-navigation">
+        <Link href={space ? `/preparations?spaceId=${space.id}` : "/preparations"}>
+          Persiapan Acara{space ? ` · ${space.name}` : " · Pribadi"}
+        </Link>
+      </div>
       {(manage || space) && (
         <div className="space-navigation">
           <button

@@ -185,6 +185,13 @@ export function SpaceScreen() {
   return (
     <Page refresh={shared.reload}>
       <Txt large>{space?.name || "Ruang bersama"}</Txt>
+      <Button
+        title="Persiapan acara bersama"
+        secondary
+        onPress={() =>
+          router.push({ pathname: "/preparations", params: { scope } })
+        }
+      />
       <Txt muted>
         {space?.kind === "couple" ? "Dompet pasangan" : "Dompet keluarga"} ·{" "}
         {details.members.length} anggota
@@ -308,7 +315,9 @@ export function SpaceScreen() {
                 onChange={setActivityCategory}
                 options={[
                   { value: "", label: "Semua kategori" },
-                  ...(finance.availableCategories ?? categoryOptions(finance)).map((name) => ({
+                  ...(
+                    finance.availableCategories ?? categoryOptions(finance)
+                  ).map((name) => ({
                     value: name,
                     label: name,
                   })),
