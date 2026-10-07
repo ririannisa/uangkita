@@ -4,11 +4,11 @@
     "slug": "uangkita",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-uangkita-generated.png",
     "scheme": "uangkita",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon-uangkita-generated.png",
       "bundleIdentifier": "id.uangkita.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,25 +17,24 @@
     "android": {
       "package": "id.uangkita.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#DEF3EC",
+        "foregroundImage": "./assets/images/icon-uangkita-foreground.png",
+        "monochromeImage": "./assets/images/icon-uangkita-foreground.png"
       },
       "predictiveBackGestureEnabled": true
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon-uangkita-generated.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#7254ad",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#DEF3EC",
+          "image": "./assets/images/icon-uangkita-foreground.png",
+          "imageWidth": 160
         }
       ],
       "expo-secure-store",
