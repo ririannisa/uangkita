@@ -288,6 +288,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         acknowledgeSharedData: true,
       });
       await clearSession().catch(() => undefined);
+      generation.current++;
       setUser(null);
       setData(emptyData);
       setSpaces({ spaces: [], invitations: [], emailVerified: false });
