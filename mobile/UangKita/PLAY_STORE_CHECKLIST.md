@@ -177,6 +177,7 @@ npx.cmd eas-cli@latest build:version:set --platform android
 ```
 
 - [ ] Tetap gunakan keystore/upload key proyek yang sama; kelola cadangannya secara aman melalui EAS Credentials.
+- [x] Upload key EAS untuk `com.aksenraras.uangkita.app` sudah dicocokkan dengan sertifikat yang diminta Play Console pada 8 Oktober 2026: SHA1 `0F:B5:5E:73:3B:81:3D:34:97:0B:6C:5A:A4:88:F8:22:D7:4F:04:3A`. Kunci yang sama digunakan kembali dari konfigurasi Android sebelumnya. Untuk update berikutnya, gunakan kunci ini; cocokkan dengan **Upload key certificate**, bukan **App signing key certificate**.
 - [ ] Ingat bahwa `EXPO_PUBLIC_API_URL` tertanam saat build; jangan taruh password, database URL, atau secret di variabel `EXPO_PUBLIC_*`.
 
 `autoIncrement` mengelola nomor build, bukan `expo.version` yang dibaca pengguna. Untuk aplikasi yang belum pernah diupload ke Play, EAS menginisialisasi nomor remote saat build; verifikasi nomor hasilnya di detail build.
@@ -321,6 +322,7 @@ UangKita saat ini belum memasang `expo-updates` atau mengatur `updates.url`, `ru
 | --- | --- |
 | APK ditolak untuk aplikasi baru | Gunakan build `store` yang menghasilkan AAB |
 | versionCode sudah dipakai | Cocokkan versi remote dengan nomor tertinggi di Play; rebuild store dengan nomor lebih tinggi |
+| App Bundle ditandatangani dengan kunci yang salah | Cocokkan SHA1 upload key dengan `0F:B5:5E:73:3B:81:3D:34:97:0B:6C:5A:A4:88:F8:22:D7:4F:04:3A` dan pilih keystore EAS yang sesuai sebelum rebuild. Mengganti package tidak mengganti persyaratan sertifikat Play; jangan membuat kunci baru untuk memperbaiki ketidakcocokan ini. |
 | 403 / permission denied | Periksa service account, API aktif, akses app yang benar, izin release, dan waktu propagasi |
 | Package/application tidak ditemukan | Cocokkan `com.aksenraras.uangkita.app`, aplikasi di Console, dan akses service account; selesaikan upload awal UI jika diminta |
 | App masih draft / changes not sent for review | Selesaikan setup, draft dan pengiriman review dari Console; ini sesuai default submit yang dipasang |
