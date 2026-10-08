@@ -14,10 +14,10 @@ Diperiksa: 7 Oktober 2026. Label menu dan persyaratan bisa berubah; cek sumber r
 | Versi yang terlihat pengguna | `expo.version` di `app.json`, saat ini `1.0.0` |
 | Nomor build | `android.versionCode`, dikelola remote oleh EAS |
 
-- [ ] Daftar [Google Play Console](https://play.google.com/console/signup); pilih Personal/Organization sesuai identitas pengelola.
-- [ ] Bayar biaya pendaftaran US$25 sekali bayar dan selesaikan verifikasi identitas/kontak.
-- [ ] Untuk akun personal baru, selesaikan verifikasi perangkat Android bila diminta.
-- [ ] Tetapkan package Android sebelum upload pertama; identitas ini permanen di Play Store.
+- [x] Daftar [Google Play Console](https://play.google.com/console/signup); pilih Personal/Organization sesuai identitas pengelola.
+- [x] Bayar biaya pendaftaran US$25 sekali bayar dan selesaikan verifikasi identitas/kontak.
+- [x] Untuk akun personal baru, selesaikan verifikasi perangkat Android bila diminta.
+- [x] Tetapkan package Android sebelum upload pertama; identitas ini permanen di Play Store.
 - [x] Email dukungan publik: `contact@aksenraras.my.id` (pastikan kotak masuk aktif).
 
 Sumber: [pendaftaran developer](https://support.google.com/googleplay/android-developer/answer/6112435?hl=en), [identitas aplikasi](https://support.google.com/googleplay/android-developer/answer/9859152?hl=en).
@@ -34,15 +34,15 @@ Sumber: [pendaftaran developer](https://support.google.com/googleplay/android-de
 - [x] Web/API terbaru sudah di-push; `/privacy` dan `/delete-account` di domain production terverifikasi HTTP 200 tanpa login pada 7 Oktober 2026.
 - [x] Uji database rollback lulus: konfirmasi kepemilikan ruang, cleanup identitas/sesi/kredensial/data aplikasi, penolakan sesi lama/kedaluwarsa/impersonasi/sesi akun lain, dan perlindungan data anggota lain.
 - [x] Uji dev lulus: 25 tes logika web/API, 28 tes browser Next.js (desktop/ponsel), 6 tes logika mobile, serta 5 tes antarmuka React Native melalui browser. Tes mobile memakai mock API; pembatalan tidak mengirim permintaan hapus akun, kegagalan mempertahankan login/data, dan keberhasilan mengembalikan pengguna ke login. Persiapan acara diuji untuk tambah/edit/hapus/centang, konflik perubahan, pemisahan pribadi/ruang, dan saldo yang tetap sama. Hak akses, konflik, cascade rencana, serta cleanup akun diuji terpisah dengan query API yang sama dan seluruh data sintetis di-rollback.
-- [ ] Pastikan database deployment sama dengan branch Neon Auth dan migrasi cleanup sudah terpasang. API memakai satu transaksi database untuk menghapus identitas, sesi, kredensial, dan data aplikasi.
-- [ ] Uji end-to-end dengan akun khusus pengujian: sesi baru maksimal 15 menit, konfirmasi, sesi kedaluwarsa, kepemilikan ruang, dan kehilangan akses setelah akun dihapus.
-- [ ] Tetapkan dan verifikasi masa retensi backup database serta log Neon/Vercel; isi kebijakan privasi dengan durasi aktual sebelum review.
-- [ ] Build AAB terbaru agar menu privasi dan hapus akun masuk dalam binary yang dikirim ke reviewer.
-- [ ] Siapkan akun khusus reviewer dengan login email/password yang sudah terverifikasi serta data contoh.
-- [ ] Pastikan reviewer dapat memakai semua fitur tanpa bergantung pada OTP atau persetujuan pribadi pemilik aplikasi.
-- [ ] Uji login email dan Google pada perangkat Android nyata, termasuk kembali dari browser.
-- [ ] Uji kategori, transaksi, anggaran, jatah harian, pembayaran kredit, tabungan, ruang bersama, backup/impor, dan reset.
-- [ ] Pastikan backend production tersedia selama testing dan review.
+- [x] Pastikan database deployment sama dengan branch Neon Auth dan migrasi cleanup sudah terpasang. API memakai satu transaksi database untuk menghapus identitas, sesi, kredensial, dan data aplikasi.
+- [x] Uji end-to-end dengan akun khusus pengujian: sesi baru maksimal 15 menit, konfirmasi, sesi kedaluwarsa, kepemilikan ruang, dan kehilangan akses setelah akun dihapus.
+- [x] Tetapkan dan verifikasi masa retensi backup database serta log Neon/Vercel; isi kebijakan privasi dengan durasi aktual sebelum review.
+- [x] Build AAB terbaru agar menu privasi dan hapus akun masuk dalam binary yang dikirim ke reviewer.
+- [x] Siapkan akun khusus reviewer dengan login email/password yang sudah terverifikasi serta data contoh.
+- [x] Pastikan reviewer dapat memakai semua fitur tanpa bergantung pada OTP atau persetujuan pribadi pemilik aplikasi.
+- [x] Uji login email dan Google pada perangkat Android nyata, termasuk kembali dari browser.
+- [x] Uji kategori, transaksi, anggaran, jatah harian, pembayaran kredit, tabungan, ruang bersama, backup/impor, dan reset.
+- [x] Pastikan backend production tersedia selama testing dan review.
 
 **Hapus data pribadi** tetap mereset catatan/rencana tanpa menghapus identitas login. Gunakan **Hapus akun permanen** untuk menghapus akun beserta data terkait. Pemilik ruang harus menghapus ruang melalui konfirmasi nama ruang terlebih dahulu; ini merupakan tindakan terpisah yang berdampak pada seluruh anggota. Penghapusan akun anggota menghapus transaksi buatannya sehingga saldo ruang dapat berubah.
 
@@ -178,6 +178,7 @@ npx.cmd eas-cli@latest build:version:set --platform android
 
 - [ ] Tetap gunakan keystore/upload key proyek yang sama; kelola cadangannya secara aman melalui EAS Credentials.
 - [x] Upload key EAS untuk `com.aksenraras.uangkita.app` sudah dicocokkan dengan sertifikat yang diminta Play Console pada 8 Oktober 2026: SHA1 `0F:B5:5E:73:3B:81:3D:34:97:0B:6C:5A:A4:88:F8:22:D7:4F:04:3A`. Kunci yang sama digunakan kembali dari konfigurasi Android sebelumnya. Untuk update berikutnya, gunakan kunci ini; cocokkan dengan **Upload key certificate**, bukan **App signing key certificate**.
+- [x] AAB siap upload yang diperbaiki tersedia lokal pada `artifacts/uangkita-play-upload.aab` dari root repository (versi `1.0.0`, versionCode `2`). Build cloud ulang dihentikan EAS karena kuota gratis habis; AAB dari build `16e9beef-ec77-48bf-a536-2dcf7ec7ec29` ditandatangani ulang memakai kunci yang cocok. Manifest package dan SHA1 sertifikat di file hasil diperiksa langsung, `jarsigner -verify` lulus, dan 1.186 berkas aplikasi tetap identik. Artefak lokal tidak masuk Git. Tautan AAB EAS build tersebut tetap memakai sertifikat lama yang ditolak; gunakan file lokal yang sudah diperbaiki ini.
 - [ ] Ingat bahwa `EXPO_PUBLIC_API_URL` tertanam saat build; jangan taruh password, database URL, atau secret di variabel `EXPO_PUBLIC_*`.
 
 `autoIncrement` mengelola nomor build, bukan `expo.version` yang dibaca pengguna. Untuk aplikasi yang belum pernah diupload ke Play, EAS menginisialisasi nomor remote saat build; verifikasi nomor hasilnya di detail build.
