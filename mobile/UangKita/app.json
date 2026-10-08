@@ -15,7 +15,7 @@
       }
     },
     "android": {
-      "package": "id.uangkita.mobile",
+      "package": "com.aksenraras.uangkita.app",
       "adaptiveIcon": {
         "backgroundColor": "#DEF3EC",
         "foregroundImage": "./assets/images/icon-uangkita-foreground.png",

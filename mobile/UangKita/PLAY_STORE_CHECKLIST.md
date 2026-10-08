@@ -9,7 +9,7 @@ Diperiksa: 7 Oktober 2026. Label menu dan persyaratan bisa berubah; cek sumber r
 | Folder aplikasi | `mobile/UangKita` |
 | Akun/proyek Expo | `@valdif11/uangkita` |
 | EAS project ID | `e985179b-b1a9-4a73-b56d-ad698b99726f` |
-| Package Android | `id.uangkita.mobile` |
+| Package Android | `com.aksenraras.uangkita.app` |
 | API production | `https://uangkita.aksenraras.my.id` |
 | Versi yang terlihat pengguna | `expo.version` di `app.json`, saat ini `1.0.0` |
 | Nomor build | `android.versionCode`, dikelola remote oleh EAS |
@@ -203,7 +203,7 @@ npx.cmd eas-cli@latest credentials --platform android
 # Pilih file JSON yang tadi diunduh.
 ```
 
-- [ ] Alternatif UI: proyek Expo → Credentials → Android → `id.uangkita.mobile` → Service Credentials → Add a Google Service Account Key.
+- [ ] Alternatif UI: proyek Expo → Credentials → Android → `com.aksenraras.uangkita.app` → Service Credentials → Add a Google Service Account Key.
 - [ ] Pastikan key terhubung ke package yang sama dengan app di Play Console.
 - [ ] Simpan JSON/keystore di luar repository. Jika memakai folder lokal `credentials/`, folder ini sudah diabaikan Git; jangan paksa menambahkannya ke commit.
 
@@ -322,7 +322,7 @@ UangKita saat ini belum memasang `expo-updates` atau mengatur `updates.url`, `ru
 | APK ditolak untuk aplikasi baru | Gunakan build `store` yang menghasilkan AAB |
 | versionCode sudah dipakai | Cocokkan versi remote dengan nomor tertinggi di Play; rebuild store dengan nomor lebih tinggi |
 | 403 / permission denied | Periksa service account, API aktif, akses app yang benar, izin release, dan waktu propagasi |
-| Package/application tidak ditemukan | Cocokkan `id.uangkita.mobile`, aplikasi di Console, dan akses service account; selesaikan upload awal UI jika diminta |
+| Package/application tidak ditemukan | Cocokkan `com.aksenraras.uangkita.app`, aplikasi di Console, dan akses service account; selesaikan upload awal UI jika diminta |
 | App masih draft / changes not sent for review | Selesaikan setup, draft dan pengiriman review dari Console; ini sesuai default submit yang dipasang |
 | Production belum tersedia | Selesaikan testing serta permohonan akses untuk akun yang diwajibkan |
 | Reviewer tidak bisa masuk | Uji kredensial reviewer dari instalasi bersih pada API production; periksa verifikasi email dan akses fitur |

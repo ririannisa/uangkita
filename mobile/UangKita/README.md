@@ -77,7 +77,7 @@ Tes UI menjalankan React Native melalui React Native Web dengan API tiruan yang 
 npm run build:apk
 ```
 
-Perintah ini membangun dan menandatangani APK melalui EAS. Bundle Android lokal saja belum merupakan APK. Package Android awal: `id.uangkita.mobile`.
+Perintah ini membangun dan menandatangani APK melalui EAS. Bundle Android lokal saja belum merupakan APK. Package Android untuk Play Console: `com.aksenraras.uangkita.app`.
 
 Referensi: [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/), [Expo Router Stack](https://docs.expo.dev/router/advanced/stack/), [EAS APK](https://docs.expo.dev/build-reference/apk/).
 
